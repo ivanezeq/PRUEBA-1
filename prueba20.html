@@ -343,6 +343,17 @@
 <div class="app-container">
     <aside class="sidebar" id="main-sidebar">
         <div class="card">
+            <h4 style="border-bottom: none; margin-bottom: 0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                Buscar Grupo Familiar
+            </h4>
+            <div class="search-input-wrapper" style="margin-top: 12px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="search" id="search-input" class="search-input" placeholder="Buscar por Grupo, Nombre o Apellido...">
+            </div>
+        </div>
+
+        <div class="card">
             <details open>
                 <summary>
                     <h4>
@@ -371,11 +382,6 @@
                         <span class="slider"></span> 
                     </label>
                     <div><label for="morosos-filter" style="font-weight: 600; cursor: pointer; color: var(--text-main);">Solo con Deuda</label></div>
-                </div>
-                
-                <div class="search-input-wrapper" style="margin-top: 15px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="search" id="search-input" class="search-input" placeholder="Buscar por Grupo Familiar (ej: GF001)...">
                 </div>
                 
                 <details style="margin-top: 20px;">
@@ -514,10 +520,11 @@ function formatCurrency(value, { noDecimals = false } = {}) {
 
 function formatDate(date) { return dateFormatter.format(date); }
 function formatFullDate(date) { return fullDateFormatter.format(date); }
+function normalizeSearchText(text) { return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase(); }
 function getSelectedMonths() { return Array.from(document.querySelectorAll('#meses-container input:checked')).map(cb => cb.value); }
-const CONFIG = { 
-    columnas: { 
-        GRUPO_Y_GRADO: "GRUPO FAMILIAR", 
+const CONFIG = {
+    columnas: {
+        GRUPO_Y_GRADO: "GRUPO FAMILIAR",
         NOMBRE_ALUMNO: "__EMPTY", 
         FECHA_PAGO: "FECHA", 
         MONTO_PAGO: "MONTO",
@@ -717,13 +724,13 @@ function extractAndAggregateData() {
         const gfCursoCell = String(row[CONFIG.columnas.GRUPO_Y_GRADO] || "").trim();
         if (gfCursoCell.toUpperCase().startsWith("GF")) currentGF = gfCursoCell;
         if (currentGF) {
-            if (!groupsMap.has(currentGF)) groupsMap.set(currentGF, { grupoFamiliar: currentGF, searchKey: currentGF.toUpperCase(), alumnos: [], pagos: [] });
+            if (!groupsMap.has(currentGF)) groupsMap.set(currentGF, { grupoFamiliar: currentGF, searchParts: new Set([currentGF]), alumnos: [], pagos: [] });
             const groupData = groupsMap.get(currentGF);
             const nombreAlumnoRaw = String(row[CONFIG.columnas.NOMBRE_ALUMNO] || "").trim();
             const curso = gfCursoCell.toUpperCase().startsWith("GF") ? '' : gfCursoCell;
             if (nombreAlumnoRaw && curso) {
-                APP_STATE.gradosUnicos.add(curso); 
-                let becaDetectada = '0'; 
+                APP_STATE.gradosUnicos.add(curso);
+                let becaDetectada = '0';
                 let nombreLimpio = nombreAlumnoRaw;
                 let fechaAlta = null;
                 let fechaBaja = null;
@@ -744,8 +751,9 @@ function extractAndAggregateData() {
                     nombreLimpio = nombreLimpio.replace(matchBaja[0], '');
                 }
                 nombreLimpio = nombreLimpio.trim();
-                if (!groupData.alumnos.some(a => a.nombre === nombreLimpio && a.curso === curso)) { 
-                    groupData.alumnos.push({ nombre: nombreLimpio, curso: curso, beca: becaDetectada, detectedStart: fechaAlta, detectedEnd: fechaBaja }); 
+                if (!groupData.alumnos.some(a => a.nombre === nombreLimpio && a.curso === curso)) {
+                    groupData.alumnos.push({ nombre: nombreLimpio, curso: curso, beca: becaDetectada, detectedStart: fechaAlta, detectedEnd: fechaBaja });
+                    groupData.searchParts.add(nombreLimpio);
                 }
             }
             const monto = parseCurrency(row[CONFIG.columnas.MONTO_PAGO]);
@@ -756,7 +764,11 @@ function extractAndAggregateData() {
             }
         }
     });
-    groupsMap.forEach(group => { group.pagos.sort((a, b) => a.fecha - b.fecha); });
+    groupsMap.forEach(group => {
+        group.pagos.sort((a, b) => a.fecha - b.fecha);
+        group.searchKey = normalizeSearchText([...group.searchParts].join(' '));
+        delete group.searchParts;
+    });
     APP_STATE.aggregatedData = Array.from(groupsMap.values());
     return true;
 }
@@ -1316,11 +1328,11 @@ function processAndDisplay() {
     }, 50); 
 }
 
-function aplicarFiltrosYRenderizar() { 
-    const searchTerm = document.getElementById('search-input').value.toUpperCase(); 
-    const morososOnly = document.getElementById('morosos-filter').checked; 
-    const gradosContainer = document.getElementById('grados-container'); 
-    const selectedGrades = Array.from(gradosContainer.querySelectorAll('input:checked')).map(cb => cb.value); 
+function aplicarFiltrosYRenderizar() {
+    const searchTerm = normalizeSearchText(document.getElementById('search-input').value);
+    const morososOnly = document.getElementById('morosos-filter').checked;
+    const gradosContainer = document.getElementById('grados-container');
+    const selectedGrades = Array.from(gradosContainer.querySelectorAll('input:checked')).map(cb => cb.value);
     const datosFiltrados = APP_STATE.aggregatedData.filter(group => {
         const matchSearch = searchTerm ? group.searchKey.includes(searchTerm) : true;
         const matchMorosos = morososOnly ? group.deudaCalculada > 0.01 : true;
