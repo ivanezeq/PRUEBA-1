@@ -10,114 +10,138 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <style>
         :root {
-            /* Paleta de Colores Modernos (Slate & Indigo) */
-            --primary-color: #4f46e5; /* Indigo 600 */
-            --primary-hover: #4338ca; /* Indigo 700 */
-            --primary-light: #e0e7ff; /* Indigo 100 */
-            
-            --bg-color: #f1f5f9;      /* Slate 100 */
-            --card-bg: #ffffff;
-            
+            /* Paleta de Colores Modernos (Indigo & Cyan) */
+            --primary-color: #5850ec; /* Indigo 600 */
+            --primary-hover: #4a44d6; /* Indigo 700 */
+            --primary-light: #eef2ff; /* Indigo 100 */
+            --accent-color: #22d3ee;  /* Cyan 400 */
+
+            --bg-color: #f6f7fb;      /* Fondo suave */
+            --card-bg: rgba(255, 255, 255, 0.94);
+
             --text-main: #0f172a;     /* Slate 900 */
-            --text-secondary: #64748b;/* Slate 500 */
-            
-            --border-color: #e2e8f0;  /* Slate 200 */
-            
+            --text-secondary: #5b6476;/* Slate 500 */
+
+            --border-color: #e5e7eb;  /* Slate 200 */
+
             /* Colores de Estado */
             --success-color: #16a34a; /* Green 600 */
             --danger-color: #dc2626;  /* Red 600 */
             --neutral-color: #94a3b8; /* Slate 400 */
-            
+
             --warning-color: #f59e0b; /* Amber 500 */
             --warning-bg: #fef3c7;
-            
+
             --font-family: 'Inter', sans-serif;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --radius: 0.75rem;
+            --shadow-sm: 0 6px 14px 0 rgb(88 80 236 / 0.05);
+            --shadow-md: 0 14px 35px -12px rgb(15 23 42 / 0.25);
+            --radius: 0.9rem;
         }
 
         * { box-sizing: border-box; }
         
         html { scroll-behavior: smooth; }
         
-        body { 
-            font-family: var(--font-family); 
-            line-height: 1.5; 
-            margin: 0; 
-            background-color: var(--bg-color); 
-            color: var(--text-main); 
-            font-size: 15px; 
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            margin: 0;
+            background: radial-gradient(800px circle at 10% 20%, rgba(88, 80, 236, 0.12), transparent 45%),
+                        radial-gradient(900px circle at 90% 10%, rgba(34, 211, 238, 0.12), transparent 50%),
+                        var(--bg-color);
+            color: var(--text-main);
+            font-size: 15px;
             -webkit-font-smoothing: antialiased;
         }
 
         /* Header Principal */
-        .app-header { 
-            background: var(--card-bg);
+        .app-header {
+            background: linear-gradient(135deg, rgba(88, 80, 236, 0.92), rgba(34, 211, 238, 0.9));
             padding: 1.25rem 2rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 15px;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--shadow-md);
+            color: white;
         }
         
-        .app-header svg { stroke: var(--primary-color); width: 32px; height: 32px; }
+        .app-header svg { stroke: white; width: 36px; height: 36px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.12)); }
         
-        .app-header h1 { 
-            margin: 0; 
-            font-size: 1.5rem; 
-            font-weight: 700; 
-            color: var(--text-main); 
+        .app-header h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: white;
             letter-spacing: -0.025em;
         }
+
+        .app-header p {
+            margin: 0.1rem 0 0 0;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.95rem;
+        }
         
-        .app-header .version-tag { 
-            font-size: 0.75rem; 
-            background-color: var(--primary-light); 
-            color: var(--primary-color); 
-            padding: 2px 8px; 
-            border-radius: 999px; 
-            font-weight: 600; 
-            letter-spacing: 0.05em;
+        .app-header .version-tag {
+            font-size: 0.8rem;
+            background: rgba(255,255,255,0.18);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
         }
 
         /* Layout Principal */
-        .app-container { 
-            display: grid; 
-            grid-template-columns: 350px 1fr; 
-            gap: 25px; 
-            padding: 25px; 
-            max-width: 1600px; 
-            margin: 0 auto; 
+        .app-container {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 24px;
+            padding: 28px;
+            max-width: 1500px;
+            margin: 0 auto;
         }
 
         .sidebar { display: flex; flex-direction: column; gap: 20px; }
         .main-content { display: flex; flex-direction: column; gap: 20px; }
 
+        .section-helper {
+            margin: 4px 0 0 0;
+            color: rgba(255,255,255,0.75);
+            font-size: 0.9rem;
+        }
+
         /* Tarjetas */
-        .card { 
-            background: var(--card-bg); 
-            padding: 20px; 
-            border-radius: var(--radius); 
-            box-shadow: var(--shadow-md); 
-            border: 1px solid var(--border-color);
+        .card {
+            background: var(--card-bg);
+            padding: 22px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            backdrop-filter: blur(6px);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 38px -18px rgba(15, 23, 42, 0.35);
         }
 
         /* Títulos */
-        h4 { 
-            color: var(--text-main); 
-            margin: 0 0 15px 0; 
-            padding-bottom: 10px; 
-            border-bottom: 1px solid var(--border-color); 
-            font-size: 1.1rem; 
+        h4 {
+            color: var(--text-main);
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1.1rem;
             font-weight: 600;
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         h4 svg { stroke: var(--text-secondary); width: 20px; height: 20px; }
@@ -126,36 +150,36 @@
         h6 { color: var(--text-secondary); font-size: 0.8rem; margin: 15px 0 8px 0; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
 
         /* Botones */
-        .btn { 
-            display: inline-flex; 
-            justify-content: center; 
-            align-items: center; 
-            gap: 8px; 
-            width: 100%; 
-            padding: 10px 16px; 
-            color: white; 
-            border: 1px solid transparent; 
-            cursor: pointer; 
-            border-radius: 8px; 
-            font-size: 0.95rem; 
-            font-weight: 500; 
-            transition: all 0.2s ease; 
+        .btn {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 16px;
+            color: white;
+            border: 1px solid transparent;
+            cursor: pointer;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
             box-shadow: var(--shadow-sm);
         }
         
         .btn:active { transform: translateY(0); }
         
-        .btn-primary { background: var(--primary-color); } 
-        .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); transform: translateY(-1px); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary-color), #4338ca); }
+        .btn-primary:hover { background: linear-gradient(135deg, var(--primary-hover), #3730a3); box-shadow: 0 10px 25px rgba(67, 56, 202, 0.35); transform: translateY(-1px); }
         
-        .btn-success { background-color: var(--success-color); }
-        .btn-success:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transform: translateY(-1px); }
+        .btn-success { background: linear-gradient(135deg, #16a34a, #0ea5e9); }
+        .btn-success:hover { background: linear-gradient(135deg, #0f9e3d, #0284c7); box-shadow: 0 10px 25px rgba(14, 165, 233, 0.35); transform: translateY(-1px); }
         
         .btn-warning { background-color: var(--warning-color); color: white; }
         .btn-warning:hover { background-color: #d97706; }
         
         .btn-export { background-color: white; color: var(--text-secondary); border: 1px solid var(--border-color); }
-        .btn-export:hover { background-color: var(--bg-color); color: var(--text-main); border-color: var(--text-secondary); }
+        .btn-export:hover { background-color: #f8fafc; color: var(--text-main); border-color: var(--text-secondary); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08); }
         
         .btn:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none; }
         .btn-sm { font-size: 0.8rem !important; padding: 6px 12px !important; width: auto !important; height: 32px;}
@@ -165,17 +189,18 @@
         .search-input-wrapper svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); stroke: var(--text-secondary); width: 18px; height: 18px; }
         
         .search-input { 
-            width: 100%; 
-            padding: 10px 12px 10px 40px; 
-            font-size: 0.95rem; 
-            border-radius: 8px; 
-            border: 1px solid var(--border-color); 
-            background: var(--bg-color);
+            width: 100%;
+            padding: 12px 12px 12px 44px;
+            font-size: 0.95rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: white;
             color: var(--text-main);
             transition: all 0.2s;
             font-family: var(--font-family);
+            box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
         }
-        .search-input:focus { outline: none; border-color: var(--primary-color); background: white; box-shadow: 0 0 0 3px var(--primary-light); }
+        .search-input:focus { outline: none; border-color: var(--primary-color); background: #f8fafc; box-shadow: 0 0 0 4px var(--primary-light); }
 
         /* Checkboxes y Radios */
         #meses-container, #grados-container, .export-buttons-container, .detail-toggles, .manual-option-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -212,23 +237,24 @@
         
         /* Tablas */
         #resultsTable { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 0.9rem; }
-        #resultsTable th { 
-            background-color: var(--bg-color); 
-            color: var(--text-secondary); 
-            font-size: 0.75rem; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            font-weight: 600; 
-            padding: 12px 16px; 
-            text-align: left; 
+        #resultsTable th {
+            background: linear-gradient(180deg, #f8fafc, #eef2ff);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            padding: 12px 16px;
+            text-align: left;
             border-bottom: 1px solid var(--border-color);
             position: sticky; top: 0; z-index: 10;
         }
-        #resultsTable td { padding: 16px; border-bottom: 1px solid var(--border-color); vertical-align: top; color: var(--text-main); }
+        #resultsTable td { padding: 16px; border-bottom: 1px solid var(--border-color); vertical-align: top; color: var(--text-main); background: white; }
         #resultsTable tr:last-child td { border-bottom: none; }
         
         #resultsTable tbody tr.main-row { transition: background-color 0.2s; }
         #resultsTable tbody tr.main-row:hover { background-color: var(--bg-color); }
+        #resultsTable tbody tr:nth-child(even) td { background: #f8fafc; }
         
         .currency { text-align: right !important; font-family: 'Inter', monospace; font-weight: 600; white-space: nowrap; }
         
@@ -272,7 +298,7 @@
         .bonificado-text { color: var(--success-color); font-weight: 600; font-size: 0.9em; }
         .regular-text { color: var(--text-secondary); font-weight: 500; font-size: 0.9em; text-decoration: line-through; }
         
-        #manual-results-output { width: 100%; background: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); }
+        #manual-results-output { width: 100%; background: white; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
         #manual-results-output th { background: #f1f5f9; color: var(--text-secondary); font-weight: 600; font-size: 0.8rem; padding: 10px; text-align: left;}
         #manual-results-output td { padding: 10px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; vertical-align: middle; }
         #manual-results-output tr:last-child td { border-bottom: none; }
@@ -309,6 +335,7 @@
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
     <div>
         <h1>Analizador de Cuentas</h1>
+        <p class="section-helper">Interfaz más fluida, limpia y lista para explorar tus datos.</p>
     </div>
     <span class="version-tag">v20.9</span>
 </div>
