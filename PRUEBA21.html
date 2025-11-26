@@ -234,6 +234,13 @@
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: var(--primary-color); }
         input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Controles numéricos de filtro */
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 14px; }
+        .filter-field { display: flex; flex-direction: column; gap: 6px; background: var(--bg-color); padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+        .filter-field label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+        .filter-field input { padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: var(--font-family); }
+        .filter-field input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
         
         /* Tablas */
         #resultsTable { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 0.9rem; }
@@ -384,15 +391,30 @@
                 Cargando Configuración...
             </button>
             
-            <div id="filters-container" style="display:none; margin-top:20px;">
+                <div id="filters-container" style="display:none; margin-top:20px;">
                  <div class="toggle-container">
-                    <label class="toggle-switch"> 
-                        <input type="checkbox" id="morosos-filter"> 
-                        <span class="slider"></span> 
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="morosos-filter">
+                        <span class="slider"></span>
                     </label>
                     <div><label for="morosos-filter" style="font-weight: 600; cursor: pointer; color: var(--text-main);">Solo con Deuda</label></div>
                 </div>
-                
+
+                <div class="filter-grid">
+                    <div class="filter-field">
+                        <label for="debt-min-filter">Deuda mínima</label>
+                        <input type="number" id="debt-min-filter" min="0" step="1000" placeholder="Ej: 50000">
+                    </div>
+                    <div class="filter-field">
+                        <label for="debt-max-filter">Deuda máxima</label>
+                        <input type="number" id="debt-max-filter" min="0" step="1000" placeholder="Sin límite">
+                    </div>
+                    <div class="filter-field">
+                        <label for="sibling-filter">Mínimo de hermanos</label>
+                        <input type="number" id="sibling-filter" min="0" step="1" placeholder="Ej: 1">
+                    </div>
+                </div>
+
                 <details style="margin-top: 20px;">
                     <summary>
                         <h5 style="color: var(--primary-color); font-weight: bold;">Filtrar por Grado/Curso</h5>
@@ -1388,15 +1410,23 @@ function processAndDisplay() {
 function aplicarFiltrosYRenderizar() {
     const searchTerm = normalizeSearchText(document.getElementById('search-input').value);
     const morososOnly = document.getElementById('morosos-filter').checked;
+    const deudaMin = parseFloat(document.getElementById('debt-min-filter').value);
+    const deudaMax = parseFloat(document.getElementById('debt-max-filter').value);
+    const minHermanos = parseInt(document.getElementById('sibling-filter').value, 10);
     const gradosContainer = document.getElementById('grados-container');
     const selectedGrades = Array.from(gradosContainer.querySelectorAll('input:checked')).map(cb => cb.value);
     const datosFiltrados = APP_STATE.aggregatedData.filter(group => {
         const matchSearch = searchTerm ? group.searchKey.includes(searchTerm) : true;
-        const matchMorosos = morososOnly ? group.deudaCalculada > 0.01 : true;
+        const deudaGrupo = Number(group.deudaCalculada) || 0;
+        const matchMorosos = morososOnly ? deudaGrupo > 0.01 : true;
+        const matchDeudaMin = !Number.isFinite(deudaMin) ? true : deudaGrupo >= deudaMin;
+        const matchDeudaMax = !Number.isFinite(deudaMax) ? true : deudaGrupo <= deudaMax;
+        const hermanos = Math.max((group.alumnos?.length || 0) - 1, 0);
+        const matchHermanos = Number.isNaN(minHermanos) ? true : hermanos >= minHermanos;
         const matchGrade = selectedGrades.length > 0 ? group.alumnos.some(alu => selectedGrades.includes(alu.curso)) : true;
-        return matchSearch && matchMorosos && matchGrade;
-    }); 
-    renderizarTablaResultados(datosFiltrados); 
+        return matchSearch && matchMorosos && matchDeudaMin && matchDeudaMax && matchHermanos && matchGrade;
+    });
+    renderizarTablaResultados(datosFiltrados);
 }
 
 async function processExcelBuffer(arrayBuffer) { try { const data = new Uint8Array(arrayBuffer); const workbook = XLSX.read(data, { type: 'array' }); const worksheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); if (jsonData.length === 0) throw new Error("El archivo remoto está vacío."); APP_STATE.rawData = jsonData.map(row => { const newRow = {}; for (const key in row) { newRow[normalizeHeader(key)] = row[key]; } return newRow; }); const analyzeBtn = document.getElementById('analyze-btn'); analyzeBtn.disabled = false; analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20v-4M18 20v-8"></path></svg>Analizar y Calcular Deudas`; document.getElementById('resultsTable').getElementsByTagName('tbody')[0].innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color:var(--text-secondary)">Datos cargados. Presione "Analizar" para comenzar.</td></tr>`; } catch (error) { console.error("Error procesando Excel:", error); alert(`Error al procesar los datos: ${error.message}`); } }
@@ -1690,6 +1720,9 @@ function initializeApp() {
     document.getElementById('analyze-btn').addEventListener('click', processAndDisplay);
     document.getElementById('search-input').addEventListener('input', aplicarFiltrosYRenderizar);
     document.getElementById('morosos-filter').addEventListener('change', aplicarFiltrosYRenderizar);
+    document.getElementById('debt-min-filter').addEventListener('input', aplicarFiltrosYRenderizar);
+    document.getElementById('debt-max-filter').addEventListener('input', aplicarFiltrosYRenderizar);
+    document.getElementById('sibling-filter').addEventListener('input', aplicarFiltrosYRenderizar);
     document.getElementById('global-copy-btn').addEventListener('click', e => { const h = ['Grupo Familiar', 'Alumnos', 'Total Pagado', 'Deuda/Saldo']; const d = generateGlobalExportData(); copyToClipboard(e.target, formatDataAsTSV(h, d)); });
     document.getElementById('global-export-btn').addEventListener('click', () => { const h = ['Grupo Familiar', 'Alumnos', 'Total Pagado', 'Deuda/Saldo']; const d = generateGlobalExportData(); exportToXLSX(h, d, 'resumen_global_pagos.xlsx'); });
     document.getElementById('btn-generate-simple-book').addEventListener('click', generarLibroSimplificado);
