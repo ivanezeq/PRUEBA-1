@@ -325,6 +325,15 @@
         .modal-sidebar { background: #f8fafc; border-right: 1px solid var(--border-color); padding: 1.5rem; overflow-y: auto; }
         .modal-content-area { padding: 2rem; overflow-y: auto; background: white; }
 
+        .family-info-panel { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
+        .family-info-panel h4 { border-bottom: none; padding-bottom: 6px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .family-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+        .family-info-card { background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow-sm); }
+        .family-info-card h5 { margin: 0 0 6px 0; display: flex; justify-content: space-between; align-items: center; }
+        .family-info-meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--text-secondary); font-size: 0.9rem; }
+        .family-chip { background: var(--primary-light); color: var(--primary-color); padding: 4px 8px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; }
+        .family-tag { background: #e2e8f0; padding: 3px 8px; border-radius: 999px; font-size: 0.8rem; }
+
         @media (max-width: 1200px) { .app-container { grid-template-columns: 1fr; padding: 15px; } .modal-body { grid-template-columns: 320px 1fr; } }
         @media (max-width: 900px) { .modal-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .modal-sidebar { border-right: none; border-bottom: 1px solid var(--border-color); max-height: 35vh; }}
     </style>
@@ -516,6 +525,12 @@ const fullDateFormatter = new Intl.DateTimeFormat('es-ES', { timeZone: 'UTC' });
 
 function formatCurrency(value, { noDecimals = false } = {}) {
     return (noDecimals ? currencyFormatterNoDecimals : currencyFormatter).format(value);
+}
+
+function formatOptionalDate(date) {
+    if (!date) return '—';
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? '—' : formatDate(parsed);
 }
 
 function formatDate(date) { return dateFormatter.format(date); }
@@ -1217,15 +1232,51 @@ function updateFamilyView(gfid) {
 
 function renderDetailPanel(gfid, containerElement) {
     const detailContainer = containerElement || document.getElementById('modal-main-content');
-    
+
     const groupData = APP_STATE.aggregatedData.find(g => g.grupoFamiliar === gfid);
     if (!groupData) return;
     const familyOverrides = APP_STATE.overrides[gfid] || {};
+    const datesOverride = familyOverrides.dates || {};
     const itemsSeleccionados = getSelectedMonths();
     const { filas, config, totalPagado, deuda: deudaTotalAcumulada, pagoReinscripcion } = calcularDeudaParaGrupo(groupData, itemsSeleccionados, familyOverrides);
     const mode = familyOverrides.calculationMode || 'default';
     let filasHTML = '';
-    
+
+    const familyCardsHTML = config.map(alumno => {
+        const overrideDates = datesOverride[alumno.originalIndex] || {};
+        const startDate = overrideDates.start || alumno.detectedStart;
+        const endDate = overrideDates.end || alumno.detectedEnd;
+        const reinsFilas = filas.filter(f => f.item === 'Reinscripción' && f.alumnoIndex === alumno.originalIndex);
+        const reinsEsperado = reinsFilas.reduce((sum, f) => sum + f.pagoEsperado, 0);
+        const reinsPagado = reinsFilas.reduce((sum, f) => sum + f.pagoRealizado, 0);
+
+        let reinscripcionEstado = 'Sin cargo';
+        if (reinsFilas.length > 0) {
+            reinscripcionEstado = reinsPagado >= reinsEsperado - 0.05
+                ? 'Completada'
+                : `Pendiente (${formatCurrency(reinsEsperado - reinsPagado, { noDecimals: true })})`;
+        }
+
+        return `<div class="family-info-card">
+            <h5><span>${alumno.nombre}</span><span class="family-chip">${alumno.curso || alumno.nivel}</span></h5>
+            <div class="family-info-meta">
+                <span class="family-tag">Alta: ${formatOptionalDate(startDate)}</span>
+                <span class="family-tag">Baja: ${formatOptionalDate(endDate)}</span>
+            </div>
+            <div class="family-info-meta" style="margin-top:6px;">
+                <span class="family-tag">Reinscripción: ${reinscripcionEstado}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    const familyInfoHTML = `<div class="family-info-panel">
+        <h4>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Datos del Grupo Familiar
+        </h4>
+        <div class="family-info-grid">${familyCardsHTML}</div>
+    </div>`;
+
     filas.forEach(fila => {
         const diferenciaFinal = fila.pagoRealizado - fila.pagoEsperado;
         const alumnoLabel = (config[fila.alumnoIndex]?.nombre || `Alumno ${fila.alumnoIndex + 1}`);
@@ -1283,7 +1334,7 @@ function renderDetailPanel(gfid, containerElement) {
             </table>
             <div style="clear: both; padding-top: 20px;">${totalesHTML}</div>
         </div>`;
-    detailContainer.innerHTML = summaryHTML;
+    detailContainer.innerHTML = familyInfoHTML + summaryHTML;
 }
 
 function processAndDisplay() { 
@@ -1386,8 +1437,8 @@ function generateFamilyExportData(gfid) {
 function generarLibroSimplificado() {
     if (APP_STATE.aggregatedData.length === 0) { alert("No hay datos cargados."); return; }
     
-    const headers = ['G. FAMILIAR', 'GRADO', 'NOMBRE', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'MANT.', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE', 'DEUDA', 'REINSCRIPCION'];
-    
+    const headers = ['G. FAMILIAR', 'GRADO', 'NOMBRE', 'BECA %', 'ALTA', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'MANT.', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE', 'DEUDA', 'REINSCRIPCION', 'BAJA'];
+
     const mapHeaderToItem = { 'MARZO': 'Marzo', 'ABRIL': 'Abril', 'MAYO': 'Mayo', 'JUNIO': 'Junio', 'JULIO': 'Julio', 'MANT.': 'Mantenimiento', 'AGOSTO': 'Agosto', 'SEPTIEMBRE': 'Septiembre', 'OCTUBRE': 'Octubre', 'NOVIEMBRE': 'Noviembre', 'DICIEMBRE': 'Diciembre', 'REINSCRIPCION': 'Reinscripción' };
     
     const redStyle = { fill: { fgColor: { rgb: "FF0000" } }, font: { color: { rgb: "FFFFFF" }, bold: true } };
@@ -1403,26 +1454,32 @@ function generarLibroSimplificado() {
     dataToProcess.forEach(group => {
         const overrides = APP_STATE.overrides[group.grupoFamiliar] || {};
         const { filas, config } = calcularDeudaParaGrupo(group, itemsSeleccionados, overrides);
-        
+
         config.forEach(alumno => {
             const alumnoOriginal = group.alumnos[alumno.originalIndex];
             const cursoReal = alumnoOriginal ? alumnoOriginal.curso : alumno.nivel;
-            
-            let rowCells = [ { v: group.grupoFamiliar, t: 's' }, { v: cursoReal, t: 's' }, { v: alumno.nombre, t: 's' } ];
-            
+            const overrideDates = overrides.dates?.[alumno.originalIndex] || {};
+            const fechaAlta = formatOptionalDate(overrideDates.start || alumno.detectedStart);
+            const fechaBaja = formatOptionalDate(overrideDates.end || alumno.detectedEnd);
+
+            const becaValor = alumno.tipoBeca && alumno.tipoBeca !== '0' ? `${alumno.tipoBeca}%` : '';
+            let rowCells = [ { v: group.grupoFamiliar, t: 's' }, { v: cursoReal, t: 's' }, { v: alumno.nombre, t: 's' }, { v: becaValor, t: 's' }, { v: fechaAlta, t: 's' } ];
+
             let acumuladoDeudaFila = 0;
 
-            for (let i = 3; i < headers.length; i++) {
+            for (let i = 5; i < headers.length; i++) {
                 const colName = headers[i];
-                
+
                 if (colName === 'DEUDA') {
                     let style = normalStyle;
                     if (acumuladoDeudaFila > 0.05) style = redStyle;
                     else if (acumuladoDeudaFila < -0.05) style = greenStyle;
-                    
+
                     rowCells.push({ v: acumuladoDeudaFila, t: 'n', s: style });
                     continue;
                 }
+
+                if (colName === 'BAJA') { rowCells.push({ v: fechaBaja, t: 's' }); continue; }
 
                 const itemName = mapHeaderToItem[colName];
                 const deudaItem = filas.find(f => f.item === itemName && f.alumnoIndex === alumno.originalIndex);
