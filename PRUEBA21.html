@@ -67,11 +67,20 @@
             z-index: 100;
             box-shadow: var(--shadow-md);
             color: white;
+            flex-wrap: wrap;
         }
-        
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 320px;
+        }
+
         .app-header svg { stroke: white; width: 36px; height: 36px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.12)); }
-        
-        .app-header h1 {
+
+        .header-text h1 {
             margin: 0;
             font-size: 1.6rem;
             font-weight: 700;
@@ -79,12 +88,12 @@
             letter-spacing: -0.025em;
         }
 
-        .app-header p {
+        .header-text p {
             margin: 0.1rem 0 0 0;
             color: rgba(255,255,255,0.8);
             font-size: 0.95rem;
         }
-        
+
         .app-header .version-tag {
             font-size: 0.8rem;
             background: rgba(255,255,255,0.18);
@@ -95,6 +104,16 @@
             letter-spacing: 0.08em;
             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
         }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+
+        .header-btn { width: auto; padding: 10px 14px; min-width: 180px; }
 
         /* Layout Principal */
         .app-container {
@@ -184,6 +203,14 @@
         .btn:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none; }
         .btn-sm { font-size: 0.8rem !important; padding: 6px 12px !important; width: auto !important; height: 32px;}
 
+        .mode-button-group { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+        .mode-button { width: auto; flex: 1 1 140px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: white; color: var(--text-main); font-weight: 700; cursor: pointer; box-shadow: var(--shadow-sm); display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; }
+        .mode-button:hover { border-color: var(--primary-color); color: var(--primary-color); box-shadow: 0 10px 22px rgba(88, 80, 236, 0.15); transform: translateY(-1px); }
+        .mode-button.active { background: linear-gradient(135deg, #f0f4ff, #e0f7ff); border-color: var(--primary-color); color: var(--primary-color); }
+        .mode-button .badge { font-size: 0.65rem; background: var(--primary-light); color: var(--primary-color); padding: 2px 8px; border-radius: 999px; font-weight: 800; letter-spacing: 0.08em; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
         /* Inputs y Controles */
         .search-input-wrapper { position: relative; }
         .search-input-wrapper svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); stroke: var(--text-secondary); width: 18px; height: 18px; }
@@ -234,6 +261,26 @@
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: var(--primary-color); }
         input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Controles numéricos de filtro */
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 14px; }
+        .filter-field { display: flex; flex-direction: column; gap: 6px; background: var(--bg-color); padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+        .filter-field label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+        .filter-field input { padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: var(--font-family); }
+        .filter-field input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
+
+        /* Bloques desplegables */
+        .collapsible { border: 1px solid var(--border-color); border-radius: 12px; background: white; box-shadow: var(--shadow-sm); overflow: hidden; }
+        .collapsible + .collapsible { margin-top: 14px; }
+        .collapsible summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; padding: 12px 14px; background: linear-gradient(135deg, #f8fafc, #eef2ff); border-bottom: 1px solid var(--border-color); }
+        .collapsible summary::-webkit-details-marker { display: none; }
+        .collapsible-header { display: flex; align-items: center; gap: 12px; }
+        .collapsible-icon { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: white; color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--border-color); }
+        .collapsible-title { margin: 0; font-weight: 700; color: var(--text-main); }
+        .collapsible-subtitle { margin: 2px 0 0; color: var(--text-secondary); font-size: 0.85rem; }
+        .collapsible-chevron { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-color); background: white; color: var(--primary-color); display: inline-flex; align-items: center; justify-content: center; transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease; box-shadow: var(--shadow-sm); }
+        .collapsible[open] .collapsible-chevron { transform: rotate(90deg); background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .collapsible-content { padding: 14px; }
         
         /* Tablas */
         #resultsTable { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 0.9rem; }
@@ -341,12 +388,24 @@
 <body>
 
 <div class="app-header">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-    <div>
-        <h1>Analizador de Cuentas</h1>
-        <p class="section-helper">Interfaz más fluida, limpia y lista para explorar tus datos.</p>
+    <div class="header-brand">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        <div class="header-text">
+            <h1>Analizador de Cuentas</h1>
+            <p>Interfaz más fluida, limpia y lista para explorar tus datos.</p>
+        </div>
+        <span class="version-tag">v21.0 (Auto-Save)</span>
     </div>
-    <span class="version-tag">v21.0 (Auto-Save)</span>
+    <div class="header-actions">
+        <button class="btn btn-primary header-btn" id="analyze-btn" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+            Cargando Configuración...
+        </button>
+        <button class="btn btn-success header-btn" id="btn-generate-simple-book">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Libro Simplificado
+        </button>
+    </div>
 </div>
 
 <div class="app-container">
@@ -363,14 +422,22 @@
         </div>
 
         <div class="card">
-            <details open>
+            <details class="collapsible" id="periodo-collapsible">
                 <summary>
-                    <h4>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        Período a Calcular
-                    </h4>
+                    <div class="collapsible-header">
+                        <div class="collapsible-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        </div>
+                        <div>
+                            <div class="collapsible-title">Período a Calcular</div>
+                            <div class="collapsible-subtitle">Selecciona los meses a incluir</div>
+                        </div>
+                    </div>
+                    <span class="collapsible-chevron">▸</span>
                 </summary>
-                <div id="meses-container" style="padding-top: 15px;"></div>
+                <div class="collapsible-content">
+                    <div id="meses-container" style="padding-top: 4px;"></div>
+                </div>
             </details>
         </div>
 
@@ -379,31 +446,63 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"></path><path d="M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
                 Análisis y Filtros
             </h4>
-            <button class="btn btn-primary" id="analyze-btn" disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
-                Cargando Configuración...
-            </button>
-            
-            <div id="filters-container" style="display:none; margin-top:20px;">
-                 <div class="toggle-container">
-                    <label class="toggle-switch"> 
-                        <input type="checkbox" id="morosos-filter"> 
-                        <span class="slider"></span> 
-                    </label>
-                    <div><label for="morosos-filter" style="font-weight: 600; cursor: pointer; color: var(--text-main);">Solo con Deuda</label></div>
-                </div>
-                
-                <details style="margin-top: 20px;">
+
+                <div id="filters-container" style="display:none; margin-top:12px;">
+                <details class="collapsible" id="debt-filters-collapsible">
                     <summary>
-                        <h5 style="color: var(--primary-color); font-weight: bold;">Filtrar por Grado/Curso</h5>
+                        <div class="collapsible-header">
+                            <div class="collapsible-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                            </div>
+                            <div>
+                                <div class="collapsible-title">Filtros de Deuda</div>
+                                <div class="collapsible-subtitle">Rango, morosidad y hermanos</div>
+                            </div>
+                        </div>
+                        <span class="collapsible-chevron">▸</span>
                     </summary>
-                    <div id="grados-container" style="padding-top: 15px;"></div>
+                    <div class="collapsible-content">
+                        <div class="toggle-container">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="morosos-filter">
+                                <span class="slider"></span>
+                            </label>
+                            <div><label for="morosos-filter" style="font-weight: 600; cursor: pointer; color: var(--text-main);">Solo con Deuda</label></div>
+                        </div>
+
+                        <div class="filter-grid">
+                            <div class="filter-field">
+                                <label for="debt-min-filter">Deuda mínima</label>
+                                <input type="number" id="debt-min-filter" min="0" step="1000" placeholder="Ej: 50000">
+                            </div>
+                            <div class="filter-field">
+                                <label for="debt-max-filter">Deuda máxima</label>
+                                <input type="number" id="debt-max-filter" min="0" step="1000" placeholder="Sin límite">
+                            </div>
+                            <div class="filter-field">
+                                <label for="sibling-filter">Mínimo de hermanos</label>
+                                <input type="number" id="sibling-filter" min="0" step="1" placeholder="Ej: 1">
+                            </div>
+                        </div>
+                    </div>
                 </details>
-                
-                <button class="btn btn-success" id="btn-generate-simple-book" style="margin-top: 20px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    Libro Simplificado
-                </button>
+                <details class="collapsible" id="grades-collapsible">
+                    <summary>
+                        <div class="collapsible-header">
+                            <div class="collapsible-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h10a2 2 0 0 1 2 2v12"></path><path d="M9 4v13a2 2 0 0 1-2 2H4"></path><path d="M9 9h10"></path><path d="m3 9 3-3-3-3"></path></svg>
+                            </div>
+                            <div>
+                                <div class="collapsible-title">Filtrar por Grado/Curso</div>
+                                <div class="collapsible-subtitle">Activa los grados que quieras ver</div>
+                            </div>
+                        </div>
+                        <span class="collapsible-chevron">▸</span>
+                    </summary>
+                    <div class="collapsible-content">
+                        <div id="grados-container" style="padding-top: 4px;"></div>
+                    </div>
+                </details>
             </div>
         </div>
     </aside>
@@ -852,9 +951,14 @@ function distribuirPagosPorMes(pagos, paymentAssignments = {}, getOnTimePools = 
     return { monthlyPools, onTimePools };
 }
 
+function sanitizeCalculationMode(mode) {
+    return ['default', 'forceBonificado', 'forceRegular'].includes(mode) ? mode : 'default';
+}
+
 function generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedStates, calculationMode, onTimePools, dateOverrides, priceOverrides) {
     let filasDeuda = [];
     let tempOnTimePools = onTimePools ? new Map(onTimePools) : null;
+    const resolvedCalcMode = sanitizeCalculationMode(calculationMode);
 
     itemsSeleccionados.forEach(item => {
         const handleItemLogic = (precios, itemDetalle, cuotaKey, alumnoIndex) => {
@@ -864,15 +968,15 @@ function generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedS
             }
             let esCuotaRegular;
             const savedState = forcedStates[cuotaKey];
-            const forceBonif = calculationMode === 'forceBonificado';
-            const forceReg = calculationMode === 'forceRegular';
+            const forceBonif = resolvedCalcMode === 'forceBonificado';
+            const forceReg = resolvedCalcMode === 'forceRegular';
 
-            if (savedState) { esCuotaRegular = savedState === 'regular'; } 
-            else if (forceBonif) { esCuotaRegular = false; } 
-            else if (forceReg) { esCuotaRegular = true; } 
+            if (forceBonif) { esCuotaRegular = false; }
+            else if (forceReg) { esCuotaRegular = true; }
+            else if (savedState) { esCuotaRegular = savedState === 'regular'; }
             else {
                 let poolEnFechaDelMes = tempOnTimePools.get(item) || 0;
-                const pagoNecesarioBonificado = precios.bonificado * 0.75; 
+                const pagoNecesarioBonificado = precios.bonificado * 0.75;
                 if (poolEnFechaDelMes >= pagoNecesarioBonificado) {
                     esCuotaRegular = false;
                     tempOnTimePools.set(item, poolEnFechaDelMes - pagoNecesarioBonificado);
@@ -957,16 +1061,17 @@ function generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedS
 }
 
 function calcularDeudaParaGrupo(groupData, itemsSeleccionados, opciones = {}) {
-    const { 
-        becas: becasOverride, 
-        forcedStates: forcedStatesOverride = {}, 
-        calculationMode = 'default', 
-        paymentAssignments = {}, 
+    const {
+        becas: becasOverride,
+        forcedStates: forcedStatesOverride = {},
+        calculationMode = 'default',
+        paymentAssignments = {},
         paymentSelections = {},
         dates: dateOverrides = {},
         priceOverrides = {}
     } = opciones;
-    
+    const resolvedCalcMode = sanitizeCalculationMode(calculationMode);
+
     const pagosSeleccionados = groupData.pagos.filter(p => paymentSelections[getPaymentId(p)] !== false);
     const totalPagado = pagosSeleccionados.reduce((sum, p) => sum + p.monto, 0);
     
@@ -982,7 +1087,7 @@ function calcularDeudaParaGrupo(groupData, itemsSeleccionados, opciones = {}) {
 
     const tipoCuota = configAlumnos.length > 1 ? "Grupo familiar" : "1 alumno";
     const { monthlyPools, onTimePools } = distribuirPagosPorMes(pagosSeleccionados, paymentAssignments, true, configAlumnos);
-    let filas = generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedStatesOverride, calculationMode, onTimePools, dateOverrides, priceOverrides);
+    let filas = generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedStatesOverride, resolvedCalcMode, onTimePools, dateOverrides, priceOverrides);
     let globalSurplus = 0;
 
     // Primer pase
@@ -1092,12 +1197,12 @@ function renderizarTablaResultados(datos) {
 
 function updateSidebarControls(gfid, containerElement) {
     const container = containerElement || document.getElementById('modal-sidebar-content');
-    
+
     const groupData = APP_STATE.aggregatedData.find(g => g.grupoFamiliar === gfid);
     if (!groupData) return;
-    
+
     const familyOverrides = APP_STATE.overrides[gfid] || {};
-    const mode = familyOverrides.calculationMode || 'default';
+    const mode = sanitizeCalculationMode(familyOverrides.calculationMode);
     
     let paymentAssignmentHTML = '<div class="payment-assignment-panel"><h5>Asignación de Pagos</h5><table class="payment-assignment-table" style="width:100%"><tbody>';
     const paymentAssignments = familyOverrides.paymentAssignments || {};
@@ -1150,7 +1255,22 @@ function updateSidebarControls(gfid, containerElement) {
         </div>`;
     });
     const becaPanelHTML = `<div class="beca-selector-panel"><h5>Alumnos y Becas</h5>${becasHTML}</div>`;
-    const calcPanelHTML = `<div class="detail-controls-panel"><h5>Configuración</h5><div class="detail-toggles" style="padding-bottom:10px;"><div>Modo:</div><div class="detail-mode-toggle"><input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-auto-${gfid}" value="default" ${mode === 'default' ? 'checked' : ''}><label for="sb-mode-auto-${gfid}">Auto</label><input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-bonif-${gfid}" value="forceBonificado" ${mode === 'forceBonificado' ? 'checked' : ''}><label for="sb-mode-bonif-${gfid}">Bonif</label><input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-reg-${gfid}" value="forceRegular" ${mode === 'forceRegular' ? 'checked' : ''}><label for="sb-mode-reg-${gfid}">Reg</label></div></div><div style="text-align:center"><button class="btn btn-sm btn-warning reset-family-btn" data-gfid="${gfid}">Resetear Familia</button></div></div>`;
+    const calcPanelHTML = `
+        <div class="detail-controls-panel">
+            <h5>Configuración</h5>
+            <div class="mode-button-group">
+                <button class="mode-button ${mode === 'default' ? 'active' : ''}" data-mode="default"><span class="badge">AUTO</span> Selección automática</button>
+                <button class="mode-button ${mode === 'forceBonificado' ? 'active' : ''}" data-mode="forceBonificado">Forzar Bonificación</button>
+                <button class="mode-button ${mode === 'forceRegular' ? 'active' : ''}" data-mode="forceRegular">Forzar Regular</button>
+            </div>
+            <div class="sr-only">
+                <input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-auto-${gfid}" value="default" ${mode === 'default' ? 'checked' : ''}>
+                <input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-bonif-${gfid}" value="forceBonificado" ${mode === 'forceBonificado' ? 'checked' : ''}>
+                <input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-reg-${gfid}" value="forceRegular" ${mode === 'forceRegular' ? 'checked' : ''}>
+            </div>
+            <p class="collapsible-subtitle" style="margin:0 0 8px;">Elige si las cuotas deben calcularse en modo automático o forzado.</p>
+            <div style="text-align:center"><button class="btn btn-sm btn-warning reset-family-btn" data-gfid="${gfid}">Resetear Familia</button></div>
+        </div>`;
     container.innerHTML = paymentAssignmentHTML + becaPanelHTML + calcPanelHTML;
 }
 
@@ -1172,10 +1292,15 @@ function updateAndSaveOverrides(gfid, type, data) {
                 APP_STATE.overrides[gfid].forcedStates[toggle.dataset.cuotaKey] = toggle.checked ? 'regular' : 'bonificado'; 
             }); 
             break; 
-        case 'calculationMode': 
-            const modeRadio = activeContainer.querySelector(`input[name="calc-mode-${gfid}"]:checked`); 
-            if (modeRadio) APP_STATE.overrides[gfid].calculationMode = modeRadio.value; 
-            break; 
+        case 'calculationMode':
+            const selectedMode = data?.mode;
+            const sanitizedMode = sanitizeCalculationMode(selectedMode || activeContainer.querySelector(`input[name="calc-mode-${gfid}"]:checked`)?.value);
+            const modeRadio = sanitizedMode ? activeContainer.querySelector(`input[name="calc-mode-${gfid}"][value="${sanitizedMode}"]`) : null;
+            if (modeRadio) {
+                modeRadio.checked = true;
+                APP_STATE.overrides[gfid].calculationMode = modeRadio.value;
+            }
+            break;
         case 'paymentAssignment': 
             APP_STATE.overrides[gfid].paymentAssignments[data.paymentId] = data.month; 
             break; 
@@ -1201,7 +1326,7 @@ function updateAndSaveOverrides(gfid, type, data) {
     if (indicator) indicator.style.display = 'inline-block'; 
 }
 
-function updateFamilyView(gfid) { 
+function updateFamilyView(gfid) {
     const groupData = APP_STATE.aggregatedData.find(g => g.grupoFamiliar === gfid); 
     const overrides = APP_STATE.overrides[gfid] || {}; 
     const itemsSeleccionados = getSelectedMonths();
@@ -1245,7 +1370,7 @@ function renderDetailPanel(gfid, containerElement) {
     const datesOverride = familyOverrides.dates || {};
     const itemsSeleccionados = getSelectedMonths();
     const { filas, config, totalPagado, deuda: deudaTotalAcumulada, pagoReinscripcion } = calcularDeudaParaGrupo(groupData, itemsSeleccionados, familyOverrides);
-    const mode = familyOverrides.calculationMode || 'default';
+    const mode = sanitizeCalculationMode(familyOverrides.calculationMode);
     let filasHTML = '';
 
     const familyCardsHTML = config.map(alumno => {
@@ -1388,15 +1513,38 @@ function processAndDisplay() {
 function aplicarFiltrosYRenderizar() {
     const searchTerm = normalizeSearchText(document.getElementById('search-input').value);
     const morososOnly = document.getElementById('morosos-filter').checked;
+    const deudaMin = parseFloat(document.getElementById('debt-min-filter').value);
+    const deudaMax = parseFloat(document.getElementById('debt-max-filter').value);
+    const minHermanos = parseInt(document.getElementById('sibling-filter').value, 10);
     const gradosContainer = document.getElementById('grados-container');
     const selectedGrades = Array.from(gradosContainer.querySelectorAll('input:checked')).map(cb => cb.value);
     const datosFiltrados = APP_STATE.aggregatedData.filter(group => {
         const matchSearch = searchTerm ? group.searchKey.includes(searchTerm) : true;
-        const matchMorosos = morososOnly ? group.deudaCalculada > 0.01 : true;
+        const deudaGrupo = Number(group.deudaCalculada) || 0;
+        const matchMorosos = morososOnly ? deudaGrupo > 0.01 : true;
+        const matchDeudaMin = !Number.isFinite(deudaMin) ? true : deudaGrupo >= deudaMin;
+        const matchDeudaMax = !Number.isFinite(deudaMax) ? true : deudaGrupo <= deudaMax;
+        const hermanos = Math.max((group.alumnos?.length || 0) - 1, 0);
+        const matchHermanos = Number.isNaN(minHermanos) ? true : hermanos >= minHermanos;
         const matchGrade = selectedGrades.length > 0 ? group.alumnos.some(alu => selectedGrades.includes(alu.curso)) : true;
-        return matchSearch && matchMorosos && matchGrade;
-    }); 
-    renderizarTablaResultados(datosFiltrados); 
+        return matchSearch && matchMorosos && matchDeudaMin && matchDeudaMax && matchHermanos && matchGrade;
+    });
+    renderizarTablaResultados(datosFiltrados);
+}
+
+function ensureOverridesRecord(gfid) {
+    if (!APP_STATE.overrides[gfid]) {
+        APP_STATE.overrides[gfid] = { becas: {}, forcedStates: {}, calculationMode: 'default', paymentAssignments: {}, paymentSelections: {}, dates: {}, priceOverrides: {} };
+    }
+    if (!['default', 'forceBonificado', 'forceRegular'].includes(APP_STATE.overrides[gfid].calculationMode)) {
+        APP_STATE.overrides[gfid].calculationMode = 'default';
+    }
+    APP_STATE.overrides[gfid].becas = APP_STATE.overrides[gfid].becas || {};
+    APP_STATE.overrides[gfid].forcedStates = APP_STATE.overrides[gfid].forcedStates || {};
+    APP_STATE.overrides[gfid].paymentAssignments = APP_STATE.overrides[gfid].paymentAssignments || {};
+    APP_STATE.overrides[gfid].paymentSelections = APP_STATE.overrides[gfid].paymentSelections || {};
+    APP_STATE.overrides[gfid].dates = APP_STATE.overrides[gfid].dates || {};
+    APP_STATE.overrides[gfid].priceOverrides = APP_STATE.overrides[gfid].priceOverrides || {};
 }
 
 async function processExcelBuffer(arrayBuffer) { try { const data = new Uint8Array(arrayBuffer); const workbook = XLSX.read(data, { type: 'array' }); const worksheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); if (jsonData.length === 0) throw new Error("El archivo remoto está vacío."); APP_STATE.rawData = jsonData.map(row => { const newRow = {}; for (const key in row) { newRow[normalizeHeader(key)] = row[key]; } return newRow; }); const analyzeBtn = document.getElementById('analyze-btn'); analyzeBtn.disabled = false; analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20v-4M18 20v-8"></path></svg>Analizar y Calcular Deudas`; document.getElementById('resultsTable').getElementsByTagName('tbody')[0].innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color:var(--text-secondary)">Datos cargados. Presione "Analizar" para comenzar.</td></tr>`; } catch (error) { console.error("Error procesando Excel:", error); alert(`Error al procesar los datos: ${error.message}`); } }
@@ -1521,6 +1669,7 @@ function generarLibroSimplificado() {
 function openFamilyModal(gfid) {
     const modal = document.getElementById('family-detail-modal');
     document.getElementById('modal-family-id').textContent = gfid;
+    ensureOverridesRecord(gfid);
     updateSidebarControls(gfid);
     renderDetailPanel(gfid);
     modal.classList.add('active');
@@ -1690,6 +1839,9 @@ function initializeApp() {
     document.getElementById('analyze-btn').addEventListener('click', processAndDisplay);
     document.getElementById('search-input').addEventListener('input', aplicarFiltrosYRenderizar);
     document.getElementById('morosos-filter').addEventListener('change', aplicarFiltrosYRenderizar);
+    document.getElementById('debt-min-filter').addEventListener('input', aplicarFiltrosYRenderizar);
+    document.getElementById('debt-max-filter').addEventListener('input', aplicarFiltrosYRenderizar);
+    document.getElementById('sibling-filter').addEventListener('input', aplicarFiltrosYRenderizar);
     document.getElementById('global-copy-btn').addEventListener('click', e => { const h = ['Grupo Familiar', 'Alumnos', 'Total Pagado', 'Deuda/Saldo']; const d = generateGlobalExportData(); copyToClipboard(e.target, formatDataAsTSV(h, d)); });
     document.getElementById('global-export-btn').addEventListener('click', () => { const h = ['Grupo Familiar', 'Alumnos', 'Total Pagado', 'Deuda/Saldo']; const d = generateGlobalExportData(); exportToXLSX(h, d, 'resumen_global_pagos.xlsx'); });
     document.getElementById('btn-generate-simple-book').addEventListener('click', generarLibroSimplificado);
@@ -1748,11 +1900,23 @@ function initializeApp() {
     });
 
     modalContainer.addEventListener('click', (e) => {
+        const modeButton = e.target.closest('.mode-button');
+        const gfid = document.getElementById('modal-family-id').textContent;
+
+        if (modeButton && gfid) {
+            const newMode = modeButton.dataset.mode;
+            updateAndSaveOverrides(gfid, 'calculationMode', { mode: newMode });
+            updateFamilyView(gfid);
+            renderDetailPanel(gfid);
+            updateSidebarControls(gfid);
+            return;
+        }
+
         if (e.target.matches('.reset-family-btn')) {
             const gfid = e.target.dataset.gfid;
-            if (confirm(`¿Resetear todos los ajustes para ${gfid}?`)) { 
-                delete APP_STATE.overrides[gfid]; 
-                saveOverrides(); 
+            if (confirm(`¿Resetear todos los ajustes para ${gfid}?`)) {
+                delete APP_STATE.overrides[gfid];
+                saveOverrides();
                 updateFamilyView(gfid); 
                 updateSidebarControls(gfid);
                 document.getElementById(`override-indicator-${gfid}`).style.display = 'none'; 
