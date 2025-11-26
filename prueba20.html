@@ -627,6 +627,11 @@ function loadOverrides() { try { const saved = localStorage.getItem(LOCAL_STORAG
 function saveOverrides() { try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(APP_STATE.overrides)); } catch (e) { console.error("Error guardando overrides:", e); } }
 function generarSelectorMeses(containerId) { const c = document.getElementById(containerId); if (c) { c.innerHTML = itemsFacturables.map(i => `<div class="mes-toggle"><input type="checkbox" id="${containerId}-${i}" value="${i}" checked><label for="${containerId}-${i}">${i}</label></div>`).join(''); } }
 function mapGradoToNivel(grado) { const g = grado.toUpperCase(); if (g.includes('SALA')) return 'Inicial'; if (g.includes('SEC')) return 'Secundaria'; return 'Primaria'; }
+function getNivelParaReinscripcion(alumno) {
+    const cursoUpper = (alumno.curso || '').toUpperCase();
+    if (cursoUpper.includes('SALA ROJA') || cursoUpper.includes('SALA AMARILLA')) return 'Primaria';
+    return alumno.nivel;
+}
 
 function autoSeleccionarMeses() { 
     const hoy = new Date(); 
@@ -912,12 +917,13 @@ function generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedS
 
                 // 2. REINSCRIPCIÓN: NO se aplica Beca (pagar total)
                 if (item === "Reinscripción") {
-                     const preciosPorNivel = cuotaReinscripcion2025[alumno.nivel];
+                     const nivelReinscripcion = getNivelParaReinscripcion(alumno);
+                     const preciosPorNivel = cuotaReinscripcion2025[nivelReinscripcion];
                      if (!preciosPorNivel) return;
                      const preciosItem = preciosPorNivel[tipoCuota];
                      if (!preciosItem) return;
-                     
-                     const { pagoEsperado, detalle, esRegular } = handleItemLogic(preciosItem, `Cargo Anual (${alumno.nivel})`, cuotaKey, alumno.originalIndex);
+
+                     const { pagoEsperado, detalle, esRegular } = handleItemLogic(preciosItem, `Cargo Anual (${nivelReinscripcion})`, cuotaKey, alumno.originalIndex);
                      filasDeuda.push({ item, alumnoIndex: alumno.originalIndex, pagoEsperado, pagoRealizado: 0, detalle, esRegular, cuotaKey });
                      return;
                 }
