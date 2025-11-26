@@ -203,6 +203,14 @@
         .btn:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none; }
         .btn-sm { font-size: 0.8rem !important; padding: 6px 12px !important; width: auto !important; height: 32px;}
 
+        .mode-button-group { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+        .mode-button { width: auto; flex: 1 1 140px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: white; color: var(--text-main); font-weight: 700; cursor: pointer; box-shadow: var(--shadow-sm); display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; }
+        .mode-button:hover { border-color: var(--primary-color); color: var(--primary-color); box-shadow: 0 10px 22px rgba(88, 80, 236, 0.15); transform: translateY(-1px); }
+        .mode-button.active { background: linear-gradient(135deg, #f0f4ff, #e0f7ff); border-color: var(--primary-color); color: var(--primary-color); }
+        .mode-button .badge { font-size: 0.65rem; background: var(--primary-light); color: var(--primary-color); padding: 2px 8px; border-radius: 999px; font-weight: 800; letter-spacing: 0.08em; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
         /* Inputs y Controles */
         .search-input-wrapper { position: relative; }
         .search-input-wrapper svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); stroke: var(--text-secondary); width: 18px; height: 18px; }
@@ -1241,7 +1249,22 @@ function updateSidebarControls(gfid, containerElement) {
         </div>`;
     });
     const becaPanelHTML = `<div class="beca-selector-panel"><h5>Alumnos y Becas</h5>${becasHTML}</div>`;
-    const calcPanelHTML = `<div class="detail-controls-panel"><h5>Configuración</h5><div class="detail-toggles" style="padding-bottom:10px;"><div>Modo:</div><div class="detail-mode-toggle"><input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-auto-${gfid}" value="default" ${mode === 'default' ? 'checked' : ''}><label for="sb-mode-auto-${gfid}">Auto</label><input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-bonif-${gfid}" value="forceBonificado" ${mode === 'forceBonificado' ? 'checked' : ''}><label for="sb-mode-bonif-${gfid}">Bonif</label><input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-reg-${gfid}" value="forceRegular" ${mode === 'forceRegular' ? 'checked' : ''}><label for="sb-mode-reg-${gfid}">Reg</label></div></div><div style="text-align:center"><button class="btn btn-sm btn-warning reset-family-btn" data-gfid="${gfid}">Resetear Familia</button></div></div>`;
+    const calcPanelHTML = `
+        <div class="detail-controls-panel">
+            <h5>Configuración</h5>
+            <div class="mode-button-group">
+                <button class="mode-button ${mode === 'default' ? 'active' : ''}" data-mode="default"><span class="badge">AUTO</span> Selección automática</button>
+                <button class="mode-button ${mode === 'forceBonificado' ? 'active' : ''}" data-mode="forceBonificado">Forzar Bonificación</button>
+                <button class="mode-button ${mode === 'forceRegular' ? 'active' : ''}" data-mode="forceRegular">Forzar Regular</button>
+            </div>
+            <div class="sr-only">
+                <input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-auto-${gfid}" value="default" ${mode === 'default' ? 'checked' : ''}>
+                <input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-bonif-${gfid}" value="forceBonificado" ${mode === 'forceBonificado' ? 'checked' : ''}>
+                <input type="radio" class="sidebar-control" name="calc-mode-${gfid}" id="sb-mode-reg-${gfid}" value="forceRegular" ${mode === 'forceRegular' ? 'checked' : ''}>
+            </div>
+            <p class="collapsible-subtitle" style="margin:0 0 8px;">Elige si las cuotas deben calcularse en modo automático o forzado.</p>
+            <div style="text-align:center"><button class="btn btn-sm btn-warning reset-family-btn" data-gfid="${gfid}">Resetear Familia</button></div>
+        </div>`;
     container.innerHTML = paymentAssignmentHTML + becaPanelHTML + calcPanelHTML;
 }
 
@@ -1263,10 +1286,14 @@ function updateAndSaveOverrides(gfid, type, data) {
                 APP_STATE.overrides[gfid].forcedStates[toggle.dataset.cuotaKey] = toggle.checked ? 'regular' : 'bonificado'; 
             }); 
             break; 
-        case 'calculationMode': 
-            const modeRadio = activeContainer.querySelector(`input[name="calc-mode-${gfid}"]:checked`); 
-            if (modeRadio) APP_STATE.overrides[gfid].calculationMode = modeRadio.value; 
-            break; 
+        case 'calculationMode':
+            const selectedMode = data?.mode;
+            const modeRadio = selectedMode ? activeContainer.querySelector(`input[name="calc-mode-${gfid}"][value="${selectedMode}"]`) : activeContainer.querySelector(`input[name="calc-mode-${gfid}"]:checked`);
+            if (modeRadio) {
+                modeRadio.checked = true;
+                APP_STATE.overrides[gfid].calculationMode = modeRadio.value;
+            }
+            break;
         case 'paymentAssignment': 
             APP_STATE.overrides[gfid].paymentAssignments[data.paymentId] = data.month; 
             break; 
@@ -1850,11 +1877,22 @@ function initializeApp() {
     });
 
     modalContainer.addEventListener('click', (e) => {
+        const modeButton = e.target.closest('.mode-button');
+        const gfid = document.getElementById('modal-family-id').textContent;
+
+        if (modeButton && gfid) {
+            const newMode = modeButton.dataset.mode;
+            updateAndSaveOverrides(gfid, 'calculationMode', { mode: newMode });
+            updateFamilyView(gfid);
+            renderDetailPanel(gfid);
+            return;
+        }
+
         if (e.target.matches('.reset-family-btn')) {
             const gfid = e.target.dataset.gfid;
-            if (confirm(`¿Resetear todos los ajustes para ${gfid}?`)) { 
-                delete APP_STATE.overrides[gfid]; 
-                saveOverrides(); 
+            if (confirm(`¿Resetear todos los ajustes para ${gfid}?`)) {
+                delete APP_STATE.overrides[gfid];
+                saveOverrides();
                 updateFamilyView(gfid); 
                 updateSidebarControls(gfid);
                 document.getElementById(`override-indicator-${gfid}`).style.display = 'none'; 
