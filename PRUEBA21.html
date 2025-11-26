@@ -951,9 +951,14 @@ function distribuirPagosPorMes(pagos, paymentAssignments = {}, getOnTimePools = 
     return { monthlyPools, onTimePools };
 }
 
+function sanitizeCalculationMode(mode) {
+    return ['default', 'forceBonificado', 'forceRegular'].includes(mode) ? mode : 'default';
+}
+
 function generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedStates, calculationMode, onTimePools, dateOverrides, priceOverrides) {
     let filasDeuda = [];
     let tempOnTimePools = onTimePools ? new Map(onTimePools) : null;
+    const resolvedCalcMode = sanitizeCalculationMode(calculationMode);
 
     itemsSeleccionados.forEach(item => {
         const handleItemLogic = (precios, itemDetalle, cuotaKey, alumnoIndex) => {
@@ -963,15 +968,15 @@ function generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedS
             }
             let esCuotaRegular;
             const savedState = forcedStates[cuotaKey];
-            const forceBonif = calculationMode === 'forceBonificado';
-            const forceReg = calculationMode === 'forceRegular';
+            const forceBonif = resolvedCalcMode === 'forceBonificado';
+            const forceReg = resolvedCalcMode === 'forceRegular';
 
-            if (savedState) { esCuotaRegular = savedState === 'regular'; } 
-            else if (forceBonif) { esCuotaRegular = false; } 
-            else if (forceReg) { esCuotaRegular = true; } 
+            if (forceBonif) { esCuotaRegular = false; }
+            else if (forceReg) { esCuotaRegular = true; }
+            else if (savedState) { esCuotaRegular = savedState === 'regular'; }
             else {
                 let poolEnFechaDelMes = tempOnTimePools.get(item) || 0;
-                const pagoNecesarioBonificado = precios.bonificado * 0.75; 
+                const pagoNecesarioBonificado = precios.bonificado * 0.75;
                 if (poolEnFechaDelMes >= pagoNecesarioBonificado) {
                     esCuotaRegular = false;
                     tempOnTimePools.set(item, poolEnFechaDelMes - pagoNecesarioBonificado);
@@ -1056,16 +1061,17 @@ function generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedS
 }
 
 function calcularDeudaParaGrupo(groupData, itemsSeleccionados, opciones = {}) {
-    const { 
-        becas: becasOverride, 
-        forcedStates: forcedStatesOverride = {}, 
-        calculationMode = 'default', 
-        paymentAssignments = {}, 
+    const {
+        becas: becasOverride,
+        forcedStates: forcedStatesOverride = {},
+        calculationMode = 'default',
+        paymentAssignments = {},
         paymentSelections = {},
         dates: dateOverrides = {},
         priceOverrides = {}
     } = opciones;
-    
+    const resolvedCalcMode = sanitizeCalculationMode(calculationMode);
+
     const pagosSeleccionados = groupData.pagos.filter(p => paymentSelections[getPaymentId(p)] !== false);
     const totalPagado = pagosSeleccionados.reduce((sum, p) => sum + p.monto, 0);
     
@@ -1081,7 +1087,7 @@ function calcularDeudaParaGrupo(groupData, itemsSeleccionados, opciones = {}) {
 
     const tipoCuota = configAlumnos.length > 1 ? "Grupo familiar" : "1 alumno";
     const { monthlyPools, onTimePools } = distribuirPagosPorMes(pagosSeleccionados, paymentAssignments, true, configAlumnos);
-    let filas = generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedStatesOverride, calculationMode, onTimePools, dateOverrides, priceOverrides);
+    let filas = generarFilasDeuda(configAlumnos, tipoCuota, itemsSeleccionados, forcedStatesOverride, resolvedCalcMode, onTimePools, dateOverrides, priceOverrides);
     let globalSurplus = 0;
 
     // Primer pase
@@ -1191,12 +1197,12 @@ function renderizarTablaResultados(datos) {
 
 function updateSidebarControls(gfid, containerElement) {
     const container = containerElement || document.getElementById('modal-sidebar-content');
-    
+
     const groupData = APP_STATE.aggregatedData.find(g => g.grupoFamiliar === gfid);
     if (!groupData) return;
-    
+
     const familyOverrides = APP_STATE.overrides[gfid] || {};
-    const mode = familyOverrides.calculationMode || 'default';
+    const mode = sanitizeCalculationMode(familyOverrides.calculationMode);
     
     let paymentAssignmentHTML = '<div class="payment-assignment-panel"><h5>Asignación de Pagos</h5><table class="payment-assignment-table" style="width:100%"><tbody>';
     const paymentAssignments = familyOverrides.paymentAssignments || {};
@@ -1288,7 +1294,8 @@ function updateAndSaveOverrides(gfid, type, data) {
             break; 
         case 'calculationMode':
             const selectedMode = data?.mode;
-            const modeRadio = selectedMode ? activeContainer.querySelector(`input[name="calc-mode-${gfid}"][value="${selectedMode}"]`) : activeContainer.querySelector(`input[name="calc-mode-${gfid}"]:checked`);
+            const sanitizedMode = sanitizeCalculationMode(selectedMode || activeContainer.querySelector(`input[name="calc-mode-${gfid}"]:checked`)?.value);
+            const modeRadio = sanitizedMode ? activeContainer.querySelector(`input[name="calc-mode-${gfid}"][value="${sanitizedMode}"]`) : null;
             if (modeRadio) {
                 modeRadio.checked = true;
                 APP_STATE.overrides[gfid].calculationMode = modeRadio.value;
@@ -1319,7 +1326,7 @@ function updateAndSaveOverrides(gfid, type, data) {
     if (indicator) indicator.style.display = 'inline-block'; 
 }
 
-function updateFamilyView(gfid) { 
+function updateFamilyView(gfid) {
     const groupData = APP_STATE.aggregatedData.find(g => g.grupoFamiliar === gfid); 
     const overrides = APP_STATE.overrides[gfid] || {}; 
     const itemsSeleccionados = getSelectedMonths();
@@ -1363,7 +1370,7 @@ function renderDetailPanel(gfid, containerElement) {
     const datesOverride = familyOverrides.dates || {};
     const itemsSeleccionados = getSelectedMonths();
     const { filas, config, totalPagado, deuda: deudaTotalAcumulada, pagoReinscripcion } = calcularDeudaParaGrupo(groupData, itemsSeleccionados, familyOverrides);
-    const mode = familyOverrides.calculationMode || 'default';
+    const mode = sanitizeCalculationMode(familyOverrides.calculationMode);
     let filasHTML = '';
 
     const familyCardsHTML = config.map(alumno => {
@@ -1525,6 +1532,21 @@ function aplicarFiltrosYRenderizar() {
     renderizarTablaResultados(datosFiltrados);
 }
 
+function ensureOverridesRecord(gfid) {
+    if (!APP_STATE.overrides[gfid]) {
+        APP_STATE.overrides[gfid] = { becas: {}, forcedStates: {}, calculationMode: 'default', paymentAssignments: {}, paymentSelections: {}, dates: {}, priceOverrides: {} };
+    }
+    if (!['default', 'forceBonificado', 'forceRegular'].includes(APP_STATE.overrides[gfid].calculationMode)) {
+        APP_STATE.overrides[gfid].calculationMode = 'default';
+    }
+    APP_STATE.overrides[gfid].becas = APP_STATE.overrides[gfid].becas || {};
+    APP_STATE.overrides[gfid].forcedStates = APP_STATE.overrides[gfid].forcedStates || {};
+    APP_STATE.overrides[gfid].paymentAssignments = APP_STATE.overrides[gfid].paymentAssignments || {};
+    APP_STATE.overrides[gfid].paymentSelections = APP_STATE.overrides[gfid].paymentSelections || {};
+    APP_STATE.overrides[gfid].dates = APP_STATE.overrides[gfid].dates || {};
+    APP_STATE.overrides[gfid].priceOverrides = APP_STATE.overrides[gfid].priceOverrides || {};
+}
+
 async function processExcelBuffer(arrayBuffer) { try { const data = new Uint8Array(arrayBuffer); const workbook = XLSX.read(data, { type: 'array' }); const worksheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); if (jsonData.length === 0) throw new Error("El archivo remoto está vacío."); APP_STATE.rawData = jsonData.map(row => { const newRow = {}; for (const key in row) { newRow[normalizeHeader(key)] = row[key]; } return newRow; }); const analyzeBtn = document.getElementById('analyze-btn'); analyzeBtn.disabled = false; analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20v-4M18 20v-8"></path></svg>Analizar y Calcular Deudas`; document.getElementById('resultsTable').getElementsByTagName('tbody')[0].innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color:var(--text-secondary)">Datos cargados. Presione "Analizar" para comenzar.</td></tr>`; } catch (error) { console.error("Error procesando Excel:", error); alert(`Error al procesar los datos: ${error.message}`); } }
 async function loadDataFromUrl(useSampleData = false) {
     const analyzeBtn = document.getElementById('analyze-btn');
@@ -1647,6 +1669,7 @@ function generarLibroSimplificado() {
 function openFamilyModal(gfid) {
     const modal = document.getElementById('family-detail-modal');
     document.getElementById('modal-family-id').textContent = gfid;
+    ensureOverridesRecord(gfid);
     updateSidebarControls(gfid);
     renderDetailPanel(gfid);
     modal.classList.add('active');
@@ -1885,6 +1908,7 @@ function initializeApp() {
             updateAndSaveOverrides(gfid, 'calculationMode', { mode: newMode });
             updateFamilyView(gfid);
             renderDetailPanel(gfid);
+            updateSidebarControls(gfid);
             return;
         }
 
