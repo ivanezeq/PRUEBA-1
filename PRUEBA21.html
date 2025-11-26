@@ -241,6 +241,19 @@
         .filter-field label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
         .filter-field input { padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: var(--font-family); }
         .filter-field input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); }
+
+        /* Bloques desplegables */
+        .collapsible { border: 1px solid var(--border-color); border-radius: 12px; background: white; box-shadow: var(--shadow-sm); overflow: hidden; }
+        .collapsible + .collapsible { margin-top: 14px; }
+        .collapsible summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; padding: 12px 14px; background: linear-gradient(135deg, #f8fafc, #eef2ff); border-bottom: 1px solid var(--border-color); }
+        .collapsible summary::-webkit-details-marker { display: none; }
+        .collapsible-header { display: flex; align-items: center; gap: 12px; }
+        .collapsible-icon { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: white; color: var(--primary-color); box-shadow: inset 0 0 0 1px var(--border-color); }
+        .collapsible-title { margin: 0; font-weight: 700; color: var(--text-main); }
+        .collapsible-subtitle { margin: 2px 0 0; color: var(--text-secondary); font-size: 0.85rem; }
+        .collapsible-chevron { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-color); background: white; color: var(--primary-color); display: inline-flex; align-items: center; justify-content: center; transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease; box-shadow: var(--shadow-sm); }
+        .collapsible[open] .collapsible-chevron { transform: rotate(90deg); background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .collapsible-content { padding: 14px; }
         
         /* Tablas */
         #resultsTable { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 0.9rem; }
@@ -370,14 +383,22 @@
         </div>
 
         <div class="card">
-            <details open>
+            <details class="collapsible" id="periodo-collapsible">
                 <summary>
-                    <h4>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        Período a Calcular
-                    </h4>
+                    <div class="collapsible-header">
+                        <div class="collapsible-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        </div>
+                        <div>
+                            <div class="collapsible-title">Período a Calcular</div>
+                            <div class="collapsible-subtitle">Selecciona los meses a incluir</div>
+                        </div>
+                    </div>
+                    <span class="collapsible-chevron">▸</span>
                 </summary>
-                <div id="meses-container" style="padding-top: 15px;"></div>
+                <div class="collapsible-content">
+                    <div id="meses-container" style="padding-top: 4px;"></div>
+                </div>
             </details>
         </div>
 
@@ -392,36 +413,63 @@
             </button>
             
                 <div id="filters-container" style="display:none; margin-top:20px;">
-                 <div class="toggle-container">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="morosos-filter">
-                        <span class="slider"></span>
-                    </label>
-                    <div><label for="morosos-filter" style="font-weight: 600; cursor: pointer; color: var(--text-main);">Solo con Deuda</label></div>
-                </div>
-
-                <div class="filter-grid">
-                    <div class="filter-field">
-                        <label for="debt-min-filter">Deuda mínima</label>
-                        <input type="number" id="debt-min-filter" min="0" step="1000" placeholder="Ej: 50000">
-                    </div>
-                    <div class="filter-field">
-                        <label for="debt-max-filter">Deuda máxima</label>
-                        <input type="number" id="debt-max-filter" min="0" step="1000" placeholder="Sin límite">
-                    </div>
-                    <div class="filter-field">
-                        <label for="sibling-filter">Mínimo de hermanos</label>
-                        <input type="number" id="sibling-filter" min="0" step="1" placeholder="Ej: 1">
-                    </div>
-                </div>
-
-                <details style="margin-top: 20px;">
+                <details class="collapsible" id="debt-filters-collapsible">
                     <summary>
-                        <h5 style="color: var(--primary-color); font-weight: bold;">Filtrar por Grado/Curso</h5>
+                        <div class="collapsible-header">
+                            <div class="collapsible-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                            </div>
+                            <div>
+                                <div class="collapsible-title">Filtros de Deuda</div>
+                                <div class="collapsible-subtitle">Rango, morosidad y hermanos</div>
+                            </div>
+                        </div>
+                        <span class="collapsible-chevron">▸</span>
                     </summary>
-                    <div id="grados-container" style="padding-top: 15px;"></div>
+                    <div class="collapsible-content">
+                        <div class="toggle-container">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="morosos-filter">
+                                <span class="slider"></span>
+                            </label>
+                            <div><label for="morosos-filter" style="font-weight: 600; cursor: pointer; color: var(--text-main);">Solo con Deuda</label></div>
+                        </div>
+
+                        <div class="filter-grid">
+                            <div class="filter-field">
+                                <label for="debt-min-filter">Deuda mínima</label>
+                                <input type="number" id="debt-min-filter" min="0" step="1000" placeholder="Ej: 50000">
+                            </div>
+                            <div class="filter-field">
+                                <label for="debt-max-filter">Deuda máxima</label>
+                                <input type="number" id="debt-max-filter" min="0" step="1000" placeholder="Sin límite">
+                            </div>
+                            <div class="filter-field">
+                                <label for="sibling-filter">Mínimo de hermanos</label>
+                                <input type="number" id="sibling-filter" min="0" step="1" placeholder="Ej: 1">
+                            </div>
+                        </div>
+                    </div>
                 </details>
-                
+
+                <details class="collapsible" id="grades-collapsible">
+                    <summary>
+                        <div class="collapsible-header">
+                            <div class="collapsible-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h10a2 2 0 0 1 2 2v12"></path><path d="M9 4v13a2 2 0 0 1-2 2H4"></path><path d="M9 9h10"></path><path d="m3 9 3-3-3-3"></path></svg>
+                            </div>
+                            <div>
+                                <div class="collapsible-title">Filtrar por Grado/Curso</div>
+                                <div class="collapsible-subtitle">Activa los grados que quieras ver</div>
+                            </div>
+                        </div>
+                        <span class="collapsible-chevron">▸</span>
+                    </summary>
+                    <div class="collapsible-content">
+                        <div id="grados-container" style="padding-top: 4px;"></div>
+                    </div>
+                </details>
+
                 <button class="btn btn-success" id="btn-generate-simple-book" style="margin-top: 20px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     Libro Simplificado
