@@ -1437,7 +1437,7 @@ function generateFamilyExportData(gfid) {
 function generarLibroSimplificado() {
     if (APP_STATE.aggregatedData.length === 0) { alert("No hay datos cargados."); return; }
     
-    const headers = ['G. FAMILIAR', 'GRADO', 'NOMBRE', 'ALTA', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'MANT.', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE', 'DEUDA', 'REINSCRIPCION', 'BAJA'];
+    const headers = ['G. FAMILIAR', 'GRADO', 'NOMBRE', 'BECA %', 'ALTA', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'MANT.', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE', 'DEUDA', 'REINSCRIPCION', 'BAJA'];
 
     const mapHeaderToItem = { 'MARZO': 'Marzo', 'ABRIL': 'Abril', 'MAYO': 'Mayo', 'JUNIO': 'Junio', 'JULIO': 'Julio', 'MANT.': 'Mantenimiento', 'AGOSTO': 'Agosto', 'SEPTIEMBRE': 'Septiembre', 'OCTUBRE': 'Octubre', 'NOVIEMBRE': 'Noviembre', 'DICIEMBRE': 'Diciembre', 'REINSCRIPCION': 'Reinscripción' };
     
@@ -1462,11 +1462,12 @@ function generarLibroSimplificado() {
             const fechaAlta = formatOptionalDate(overrideDates.start || alumno.detectedStart);
             const fechaBaja = formatOptionalDate(overrideDates.end || alumno.detectedEnd);
 
-            let rowCells = [ { v: group.grupoFamiliar, t: 's' }, { v: cursoReal, t: 's' }, { v: alumno.nombre, t: 's' }, { v: fechaAlta, t: 's' } ];
+            const becaValor = alumno.tipoBeca && alumno.tipoBeca !== '0' ? `${alumno.tipoBeca}%` : '';
+            let rowCells = [ { v: group.grupoFamiliar, t: 's' }, { v: cursoReal, t: 's' }, { v: alumno.nombre, t: 's' }, { v: becaValor, t: 's' }, { v: fechaAlta, t: 's' } ];
 
             let acumuladoDeudaFila = 0;
 
-            for (let i = 4; i < headers.length; i++) {
+            for (let i = 5; i < headers.length; i++) {
                 const colName = headers[i];
 
                 if (colName === 'DEUDA') {
