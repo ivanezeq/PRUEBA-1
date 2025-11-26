@@ -433,6 +433,33 @@
 // ===================================================================================
 const GOOGLE_SHEET_URL = `https://corsproxy.io/?${encodeURIComponent('https://docs.google.com/spreadsheets/d/e/2PACX-1vTIcJSC_zafybov4VRMjK5cbXwvuPYmz8UPVtswpjNTjwduoJ6bRQZcmiEV4N-7TFlJlJIcgvCP4rss/pub?output=xlsx')}`;
 const FEES_XLSX_URL = `https://corsproxy.io/?${encodeURIComponent('https://docs.google.com/spreadsheets/d/e/2PACX-1vSiw4aOM8GWCoHT0gi8a-OrkNO86un0B7m_cm9WQp2dBnW2QK0hzjdAs_HWN1tpQYxlfNAau1kpMcBt/pub?output=xlsx')}`;
+const SAMPLE_PAYMENT_ROWS = [
+    ["GRUPO FAMILIAR", "__EMPTY", "FECHA", "MONTO", "MES ABONADO"],
+    ["GF1", "", "", "", ""],
+    ["1°A", "Juan Pérez", "", "", ""],
+    ["2°B", "Ana Pérez", "", "", ""],
+    ["", "", "05/03/2025", 75000, "Marzo"],
+    ["", "", "05/04/2025", 75000, "Abril"],
+    ["", "", "10/05/2025", 50000, "Mantenimiento"],
+    ["", "", "12/09/2025", 75000, "Septiembre"],
+    ["", "", "20/11/2025", 75000, "Noviembre"]
+];
+const SAMPLE_FEE_ROWS = [
+    ["Mes", "Nivel", "Tipo", "Bonificado", "Regular"],
+    ["Marzo", "Primaria", "1 alumno", 67500, 75000],
+    ["Marzo", "Primaria", "Grupo familiar", 125000, 135000],
+    ["Abril", "Primaria", "1 alumno", 67500, 75000],
+    ["Mayo", "Primaria", "1 alumno", 67500, 75000],
+    ["Junio", "Primaria", "1 alumno", 67500, 75000],
+    ["Julio", "Primaria", "1 alumno", 67500, 75000],
+    ["Mantenimiento", "Primaria", "1 alumno", 50000, 50000],
+    ["Agosto", "Primaria", "1 alumno", 67500, 75000],
+    ["Septiembre", "Primaria", "1 alumno", 67500, 75000],
+    ["Octubre", "Primaria", "1 alumno", 67500, 75000],
+    ["Noviembre", "Primaria", "1 alumno", 67500, 75000],
+    ["Diciembre", "Primaria", "1 alumno", 67500, 75000],
+    ["Reinscripción", "Primaria", "1 alumno", 70000, 70000]
+];
 const LOCAL_STORAGE_KEY = 'analizadorDeudas_v20'; 
 
 let cuadroCuotas2025 = {}; 
@@ -449,6 +476,18 @@ const monthIndexMap = {
 };
 
 const APP_STATE = { rawData: [], aggregatedData: [], gradosUnicos: new Set(), overrides: {} };
+const currencyFormatter = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
+const currencyFormatterNoDecimals = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 });
+const dateFormatter = new Intl.DateTimeFormat('es-ES', { timeZone: 'UTC', day: '2-digit', month: '2-digit' });
+const fullDateFormatter = new Intl.DateTimeFormat('es-ES', { timeZone: 'UTC' });
+
+function formatCurrency(value, { noDecimals = false } = {}) {
+    return (noDecimals ? currencyFormatterNoDecimals : currencyFormatter).format(value);
+}
+
+function formatDate(date) { return dateFormatter.format(date); }
+function formatFullDate(date) { return fullDateFormatter.format(date); }
+function getSelectedMonths() { return Array.from(document.querySelectorAll('#meses-container input:checked')).map(cb => cb.value); }
 const CONFIG = { 
     columnas: { 
         GRUPO_Y_GRADO: "GRUPO FAMILIAR", 
@@ -461,6 +500,54 @@ const CONFIG = {
 
 function parseCurrency(value) { if (value === null || value === undefined) return NaN; if (typeof value === 'number') return value; let str = String(value).trim().replace(/[$.]/g, '').replace(',', '.'); const num = parseFloat(str); if (num % 1 === 0) { const digitsOnly = String(value).trim().replace(/[^0-9]/g, ''); return parseInt(digitsOnly, 10); } return num; }
 function getPaymentId(pago) { return `${pago.fecha.toISOString()}_${pago.monto}_${pago.originalIndex || 0}`; }
+function createWorkbookBufferFromAoA(rows, sheetName = "Datos") {
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    return XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+}
+
+async function parseFeeWorkbook(arrayBuffer) {
+    cuadroCuotas2025 = {};
+    cuotaMantenimiento2025 = {};
+    cuotaReinscripcion2025 = {};
+
+    const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+    const feeSheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!feeSheet) throw new Error("El archivo de cuotas no contiene hojas.");
+
+    const feeDataJson = XLSX.utils.sheet_to_json(feeSheet, { header: 1, defval: "" });
+    const firstDataRowIndex = feeDataJson.findIndex(row => row && row.length > 2 && row[1] && String(row[1]).trim());
+    if (firstDataRowIndex === -1) throw new Error("No se encontraron filas con datos válidos en la hoja de cuotas.");
+
+    const dataRows = feeDataJson.slice(firstDataRowIndex);
+    let currentMonth = "";
+    dataRows.forEach(row => {
+        if (!row || row.length < 4) return;
+        const mes = String(row[0] || currentMonth).trim();
+        if (mes) currentMonth = mes;
+
+        const nivel = String(row[1]).trim();
+        const tipo = String(row[2]).trim();
+        const valorBonificado = parseCurrency(row[3]);
+        const valorRegular = parseCurrency(row[4]);
+
+        if (!nivel || !tipo) return;
+
+        const mesLowerCase = mes.toLowerCase();
+        if (mesLowerCase.includes('mantenimiento') && nivel && tipo && !isNaN(valorBonificado)) {
+            if (!cuotaMantenimiento2025[nivel]) cuotaMantenimiento2025[nivel] = {};
+            cuotaMantenimiento2025[nivel][tipo] = { bonificado: valorBonificado, regular: valorRegular || valorBonificado };
+        } else if (mesLowerCase.includes('reinscrip') && nivel && tipo && !isNaN(valorBonificado)) {
+            if (!cuotaReinscripcion2025[nivel]) cuotaReinscripcion2025[nivel] = {};
+            cuotaReinscripcion2025[nivel][tipo] = { bonificado: valorBonificado, regular: valorRegular || valorBonificado };
+        } else if (currentMonth && nivel && tipo && !isNaN(valorBonificado) && !isNaN(valorRegular)) {
+            if (!cuadroCuotas2025[currentMonth]) cuadroCuotas2025[currentMonth] = {};
+            if (!cuadroCuotas2025[currentMonth][nivel]) cuadroCuotas2025[currentMonth][nivel] = {};
+            cuadroCuotas2025[currentMonth][nivel][tipo] = { bonificado: valorBonificado, regular: valorRegular };
+        }
+    });
+}
 
 async function loadFeeData() {
     const analyzeBtn = document.getElementById('analyze-btn');
@@ -468,49 +555,22 @@ async function loadFeeData() {
         const response = await fetch(FEES_XLSX_URL);
         if (!response.ok) throw new Error(`Error de red al cargar cuotas: ${response.statusText}`);
         const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
-        const feeSheet = workbook.Sheets[workbook.SheetNames[0]];
-        if (!feeSheet) throw new Error("El archivo de cuotas no contiene hojas.");
-        
-        const feeDataJson = XLSX.utils.sheet_to_json(feeSheet, { header: 1, defval: "" });
-        const firstDataRowIndex = feeDataJson.findIndex(row => row && row.length > 2 && row[1] && String(row[1]).trim());
-        if (firstDataRowIndex === -1) throw new Error("No se encontraron filas con datos válidos en la hoja de cuotas.");
-        
-        const dataRows = feeDataJson.slice(firstDataRowIndex);
-        let currentMonth = "";
-        dataRows.forEach(row => {
-            if (!row || row.length < 4) return;
-            const mes = String(row[0] || currentMonth).trim();
-            if (mes) currentMonth = mes;
-            
-            const nivel = String(row[1]).trim();
-            const tipo = String(row[2]).trim();
-            const valorBonificado = parseCurrency(row[3]);
-            const valorRegular = parseCurrency(row[4]);
-            
-            if (!nivel || !tipo) return;
-
-            const mesLowerCase = mes.toLowerCase();
-            if (mesLowerCase.includes('mantenimiento') && nivel && tipo && !isNaN(valorBonificado)) {
-                if (!cuotaMantenimiento2025[nivel]) cuotaMantenimiento2025[nivel] = {};
-                cuotaMantenimiento2025[nivel][tipo] = { bonificado: valorBonificado, regular: valorRegular || valorBonificado };
-            } else if (mesLowerCase.includes('reinscrip') && nivel && tipo && !isNaN(valorBonificado)) {
-                if (!cuotaReinscripcion2025[nivel]) cuotaReinscripcion2025[nivel] = {};
-                cuotaReinscripcion2025[nivel][tipo] = { bonificado: valorBonificado, regular: valorRegular || valorBonificado };
-            } else if (currentMonth && nivel && tipo && !isNaN(valorBonificado) && !isNaN(valorRegular)) {
-                if (!cuadroCuotas2025[currentMonth]) cuadroCuotas2025[currentMonth] = {};
-                if (!cuadroCuotas2025[currentMonth][nivel]) cuadroCuotas2025[currentMonth][nivel] = {};
-                cuadroCuotas2025[currentMonth][nivel][tipo] = { bonificado: valorBonificado, regular: valorRegular };
-            }
-        });
-        
+        await parseFeeWorkbook(arrayBuffer);
         analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>Cargando Datos de Pagos...`;
         loadDataFromUrl();
 
     } catch (error) {
-        alert(`Error crítico: No se pudo cargar la configuración de cuotas. La aplicación no puede continuar.\nDetalle: ${error.message}`);
-        analyzeBtn.textContent = 'ERROR AL CARGAR CONFIGURACIÓN';
-        analyzeBtn.disabled = true;
+        console.warn("Error cargando cuotas remotas, usando datos de ejemplo:", error);
+        try {
+            const fallbackBuffer = createWorkbookBufferFromAoA(SAMPLE_FEE_ROWS, 'Cuotas ejemplo');
+            await parseFeeWorkbook(fallbackBuffer);
+            analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>Usando cuotas de ejemplo...`;
+            loadDataFromUrl(true);
+        } catch (fallbackError) {
+            alert(`Error crítico: No se pudo cargar la configuración de cuotas. La aplicación no puede continuar.\nDetalle: ${fallbackError.message}`);
+            analyzeBtn.textContent = 'ERROR AL CARGAR CONFIGURACIÓN';
+            analyzeBtn.disabled = true;
+        }
     }
 }
 
@@ -630,7 +690,7 @@ function extractAndAggregateData() {
         const gfCursoCell = String(row[CONFIG.columnas.GRUPO_Y_GRADO] || "").trim();
         if (gfCursoCell.toUpperCase().startsWith("GF")) currentGF = gfCursoCell;
         if (currentGF) {
-            if (!groupsMap.has(currentGF)) groupsMap.set(currentGF, { grupoFamiliar: currentGF, alumnos: [], pagos: [] });
+            if (!groupsMap.has(currentGF)) groupsMap.set(currentGF, { grupoFamiliar: currentGF, searchKey: currentGF.toUpperCase(), alumnos: [], pagos: [] });
             const groupData = groupsMap.get(currentGF);
             const nombreAlumnoRaw = String(row[CONFIG.columnas.NOMBRE_ALUMNO] || "").trim();
             const curso = gfCursoCell.toUpperCase().startsWith("GF") ? '' : gfCursoCell;
@@ -918,40 +978,56 @@ function calcularDeudaParaGrupo(groupData, itemsSeleccionados, opciones = {}) {
     };
 }
 
+
 function renderizarTablaResultados(datos) {
     const resultsTableBody = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
     const resultsSummary = document.getElementById('results-summary');
-    resultsTableBody.innerHTML = ""; let familiasMostradas = 0; let totalDeudaGeneral = 0;
-    if (datos.length === 0) { resultsTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px;">No hay familias que coincidan con los filtros.</td></tr>`; resultsSummary.innerHTML = ""; return; }
-    datos.forEach((group) => {
-        familiasMostradas++; if(group.deudaCalculada > 0) totalDeudaGeneral += group.deudaCalculada;
-        const row = resultsTableBody.insertRow(); row.id = `row-${group.grupoFamiliar}`; row.className = 'main-row';
-        
-        let deudaClass = 'neutral-diff';
-        if (group.deudaCalculada > 0.05) deudaClass = 'negative-diff'; 
-        else if (group.deudaCalculada < -0.05) deudaClass = 'positive-diff'; 
-        
-        const o = APP_STATE.overrides[group.grupoFamiliar];
-        const hasOverride = o && (Object.keys(o).length > 0);
-        const paymentSelections = o?.paymentSelections || {};
-        const pagosHTML = group.pagos.map(p => { const paymentId = getPaymentId(p); const isChecked = paymentSelections[paymentId] !== false; return `<li><span style="color:${isChecked?'inherit':'#ccc'}">${p.fecha.toLocaleDateString('es-ES', { timeZone: 'UTC' })}</span> <strong>${p.monto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</strong></li>`; }).join('');
-        
-        let reinscripcionTag = '';
-        if (group.pagoReinscripcion > 0) {
-            reinscripcionTag = `<div class="reins-tag">+ Reinscripción: ${group.pagoReinscripcion.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 })}</div>`;
-        }
+    resultsTableBody.innerHTML = "";
 
-        row.innerHTML = `
-            <td><strong>${group.grupoFamiliar}</strong></td>
-            <td>${group.alumnos.map(a => `<div style="font-size:0.9em">${a.nombre} <span style="color:var(--text-secondary)">(${a.curso})</span></div>`).join('') || "N/A"}</td>
-            <td class="payment-cell"><details><summary><strong>${group.totalPagado.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</strong></summary><ul class="payment-list-main">${pagosHTML}</ul></details></td>
-            <td class="currency">
-                <span class="${deudaClass}">${group.deudaCalculada.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
-                ${reinscripcionTag}
-            </td>
-            <td><div class="action-cell"><button class="btn btn-primary btn-sm toggle-details-btn" data-gfid="${group.grupoFamiliar}"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>Detalle</button><span id="override-indicator-${group.grupoFamiliar}" class="override-indicator" title="Ajustes manuales" style="${hasOverride ? 'display:inline-block; margin-left: 5px; color: var(--warning-color);' : 'display:none;'}">●</span></div></td>`;
-    });
-    resultsSummary.innerHTML = `Mostrando <strong>${familiasMostradas}</strong> de <strong>${APP_STATE.aggregatedData.length}</strong> familias. Deuda visible (sin reinscripciones): <strong class="negative-diff">${totalDeudaGeneral.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</strong>`;
+    if (datos.length === 0) {
+        resultsTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px;">No hay familias que coincidan con los filtros.</td></tr>`;
+        resultsSummary.innerHTML = "";
+        return;
+    }
+
+    let totalDeudaGeneral = 0;
+    const rowsHTML = datos.map((group) => {
+        if (group.deudaCalculada > 0) totalDeudaGeneral += group.deudaCalculada;
+
+        let deudaClass = 'neutral-diff';
+        if (group.deudaCalculada > 0.05) deudaClass = 'negative-diff';
+        else if (group.deudaCalculada < -0.05) deudaClass = 'positive-diff';
+
+        const overrideConfig = APP_STATE.overrides[group.grupoFamiliar];
+        const hasOverride = overrideConfig && (Object.keys(overrideConfig).length > 0);
+        const paymentSelections = overrideConfig?.paymentSelections || {};
+        const pagosHTML = group.pagos.map(p => {
+            const paymentId = getPaymentId(p);
+            const isChecked = paymentSelections[paymentId] !== false;
+            return `<li><span style="color:${isChecked ? 'inherit' : '#ccc'}">${formatFullDate(p.fecha)}</span> <strong>${formatCurrency(p.monto)}</strong></li>`;
+        }).join('');
+
+        const reinscripcionTag = group.pagoReinscripcion > 0
+            ? `<div class="reins-tag">+ Reinscripción: ${formatCurrency(group.pagoReinscripcion, { noDecimals: true })}</div>`
+            : '';
+
+        const alumnosHTML = group.alumnos.map(a => `<div style="font-size:0.9em">${a.nombre} <span style="color:var(--text-secondary)">(${a.curso})</span></div>`).join('') || "N/A";
+
+        return `
+            <tr id="row-${group.grupoFamiliar}" class="main-row">
+                <td><strong>${group.grupoFamiliar}</strong></td>
+                <td>${alumnosHTML}</td>
+                <td class="payment-cell"><details><summary><strong>${formatCurrency(group.totalPagado)}</strong></summary><ul class="payment-list-main">${pagosHTML}</ul></details></td>
+                <td class="currency">
+                    <span class="${deudaClass}">${formatCurrency(group.deudaCalculada)}</span>
+                    ${reinscripcionTag}
+                </td>
+                <td><div class="action-cell"><button class="btn btn-primary btn-sm toggle-details-btn" data-gfid="${group.grupoFamiliar}"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>Detalle</button><span id="override-indicator-${group.grupoFamiliar}" class="override-indicator" title="Ajustes manuales" style="${hasOverride ? 'display:inline-block; margin-left: 5px; color: var(--warning-color);' : 'display:none;'}">●</span></div></td>
+            </tr>`;
+    }).join('');
+
+    resultsTableBody.innerHTML = rowsHTML;
+    resultsSummary.innerHTML = `Mostrando <strong>${datos.length}</strong> de <strong>${APP_STATE.aggregatedData.length}</strong> familias. Deuda visible (sin reinscripciones): <strong class="negative-diff">${formatCurrency(totalDeudaGeneral)}</strong>`;
 }
 
 function updateSidebarControls(gfid, containerElement) {
@@ -982,7 +1058,7 @@ function updateSidebarControls(gfid, containerElement) {
 
         paymentAssignmentHTML += `<tr>
             <td><input type="checkbox" class="payment-selection-checkbox sidebar-control" data-gfid="${gfid}" data-payment-id="${paymentId}" ${isSelected ? 'checked' : ''}></td>
-            <td style="font-size:0.85rem; padding: 4px;">${pago.fecha.toLocaleDateString('es-ES', { timeZone: 'UTC', day:'2-digit', month:'2-digit' })}<br><strong>${pago.monto.toLocaleString('es-AR', { style: 'currency', 'currency': 'ARS', minimumFractionDigits:0})}</strong></td>
+            <td style="font-size:0.85rem; padding: 4px;">${formatDate(pago.fecha)}<br><strong>${formatCurrency(pago.monto, { noDecimals: true })}</strong></td>
             <td><select class="payment-month-selector sidebar-control" data-gfid="${gfid}" data-payment-id="${paymentId}" style="width:100%; padding:2px; border-radius:4px; border:1px solid var(--border-color)">${extraOption}${options}</select></td>
         </tr>`;
     });
@@ -1068,7 +1144,7 @@ function updateAndSaveOverrides(gfid, type, data) {
 function updateFamilyView(gfid) { 
     const groupData = APP_STATE.aggregatedData.find(g => g.grupoFamiliar === gfid); 
     const overrides = APP_STATE.overrides[gfid] || {}; 
-    const itemsSeleccionados = Array.from(document.querySelectorAll('#meses-container input:checked')).map(cb => cb.value); 
+    const itemsSeleccionados = getSelectedMonths();
     const { deuda, totalPagado, pagoReinscripcion } = calcularDeudaParaGrupo(groupData, itemsSeleccionados, overrides); 
     groupData.deudaCalculada = deuda; 
     groupData.totalPagado = totalPagado; 
@@ -1083,15 +1159,15 @@ function updateFamilyView(gfid) {
         
         let reinsHTML = '';
         if (pagoReinscripcion > 0) {
-            reinsHTML = `<div class="reins-tag">+ Reinscripción: ${pagoReinscripcion.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 })}</div>`;
+            reinsHTML = `<div class="reins-tag">+ Reinscripción: ${formatCurrency(pagoReinscripcion, { noDecimals: true })}</div>`;
         }
-        
-        mainDebtCell.innerHTML = `<span class="${finalClass}">${deuda.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>${reinsHTML}`; 
-    } 
-    const mainPaidCell = document.querySelector(`#row-${gfid} td:nth-child(3) strong`); 
-    if(mainPaidCell) { 
-        mainPaidCell.textContent = totalPagado.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }); 
-    } 
+
+        mainDebtCell.innerHTML = `<span class="${finalClass}">${formatCurrency(deuda)}</span>${reinsHTML}`;
+    }
+    const mainPaidCell = document.querySelector(`#row-${gfid} td:nth-child(3) strong`);
+    if(mainPaidCell) {
+        mainPaidCell.textContent = formatCurrency(totalPagado);
+    }
     
     // Actualizar Modal si está abierto
     const modal = document.getElementById('family-detail-modal');
@@ -1106,7 +1182,7 @@ function renderDetailPanel(gfid, containerElement) {
     const groupData = APP_STATE.aggregatedData.find(g => g.grupoFamiliar === gfid);
     if (!groupData) return;
     const familyOverrides = APP_STATE.overrides[gfid] || {};
-    const itemsSeleccionados = Array.from(document.querySelectorAll('#meses-container input:checked')).map(cb => cb.value); 
+    const itemsSeleccionados = getSelectedMonths();
     const { filas, config, totalPagado, deuda: deudaTotalAcumulada, pagoReinscripcion } = calcularDeudaParaGrupo(groupData, itemsSeleccionados, familyOverrides);
     const mode = familyOverrides.calculationMode || 'default';
     let filasHTML = '';
@@ -1139,21 +1215,21 @@ function renderDetailPanel(gfid, containerElement) {
             else if (diferenciaFinal > 0.05) diffClass = 'positive-diff';
         }
         
-        filasHTML += `<tr class="${rowClass}"><td><strong>${fila.item}</strong></td><td>${alumnoLabel}</td><td>${detalleCellHTML}</td><td class="currency">${priceInputHTML}</td><td class="currency">${fila.pagoRealizado.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td><td class="currency ${diffClass}">${diferenciaFinal.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td></tr>`;
+        filasHTML += `<tr class="${rowClass}"><td><strong>${fila.item}</strong></td><td>${alumnoLabel}</td><td>${detalleCellHTML}</td><td class="currency">${priceInputHTML}</td><td class="currency">${formatCurrency(fila.pagoRealizado)}</td><td class="currency ${diffClass}">${formatCurrency(diferenciaFinal)}</td></tr>`;
     });
 
     // Totales separados para claridad
     let totalesHTML = `<h4 style="margin-top: 20px;">Estado de Cuenta</h4><table style="max-width: 400px; float: right;"><tbody>
-        <tr class="total-row"><td>Total Pagado Global</td><td class="currency">${totalPagado.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td></tr>
-        <tr class="total-row" style="border-top: 1px dashed var(--border-color)"><td>Pagado Reinscripción</td><td class="currency" style="color:var(--primary-color)">${pagoReinscripcion.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td></tr>
+        <tr class="total-row"><td>Total Pagado Global</td><td class="currency">${formatCurrency(totalPagado)}</td></tr>
+        <tr class="total-row" style="border-top: 1px dashed var(--border-color)"><td>Pagado Reinscripción</td><td class="currency" style="color:var(--primary-color)">${formatCurrency(pagoReinscripcion)}</td></tr>
         </tbody></table>`;
-    
-    if (deudaTotalAcumulada > 0.05) { 
-        totalesHTML += `<h3 class="debt-row" style="text-align:right;">Deuda Total (Regular): ${deudaTotalAcumulada.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</h3>`; 
-    } else if (deudaTotalAcumulada < -0.05) { 
-        totalesHTML += `<h3 class="total-row" style="text-align:right; color: var(--success-color)">Saldo a Favor: ${(deudaTotalAcumulada * -1).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</h3>`; 
-    } else { 
-        totalesHTML += `<h3 class="total-row" style="text-align:right; color: var(--neutral-color)">La cuenta regular está al día.</h3>`; 
+
+    if (deudaTotalAcumulada > 0.05) {
+        totalesHTML += `<h3 class="debt-row" style="text-align:right;">Deuda Total (Regular): ${formatCurrency(deudaTotalAcumulada)}</h3>`;
+    } else if (deudaTotalAcumulada < -0.05) {
+        totalesHTML += `<h3 class="total-row" style="text-align:right; color: var(--success-color)">Saldo a Favor: ${formatCurrency(deudaTotalAcumulada * -1)}</h3>`;
+    } else {
+        totalesHTML += `<h3 class="total-row" style="text-align:right; color: var(--neutral-color)">La cuenta regular está al día.</h3>`;
     }
     
     const summaryHTML = `
@@ -1183,7 +1259,7 @@ function processAndDisplay() {
                 analyzeBtn.textContent = "Analizar..."; analyzeBtn.disabled = false; return; 
             } 
             
-            const itemsSeleccionados = Array.from(document.querySelectorAll('#meses-container input:checked')).map(cb => cb.value);
+            const itemsSeleccionados = getSelectedMonths();
             
             APP_STATE.aggregatedData.forEach(group => { 
                 const groupOverrides = APP_STATE.overrides[group.grupoFamiliar] || {}; 
@@ -1218,17 +1294,40 @@ function aplicarFiltrosYRenderizar() {
     const morososOnly = document.getElementById('morosos-filter').checked; 
     const gradosContainer = document.getElementById('grados-container'); 
     const selectedGrades = Array.from(gradosContainer.querySelectorAll('input:checked')).map(cb => cb.value); 
-    const datosFiltrados = APP_STATE.aggregatedData.filter(group => { 
-        const matchSearch = searchTerm ? group.grupoFamiliar.toUpperCase().includes(searchTerm) : true; 
-        const matchMorosos = morososOnly ? group.deudaCalculada > 0.01 : true; 
-        const matchGrade = selectedGrades.length > 0 ? group.alumnos.some(alu => selectedGrades.includes(alu.curso)) : true; 
-        return matchSearch && matchMorosos && matchGrade; 
+    const datosFiltrados = APP_STATE.aggregatedData.filter(group => {
+        const matchSearch = searchTerm ? group.searchKey.includes(searchTerm) : true;
+        const matchMorosos = morososOnly ? group.deudaCalculada > 0.01 : true;
+        const matchGrade = selectedGrades.length > 0 ? group.alumnos.some(alu => selectedGrades.includes(alu.curso)) : true;
+        return matchSearch && matchMorosos && matchGrade;
     }); 
     renderizarTablaResultados(datosFiltrados); 
 }
 
 async function processExcelBuffer(arrayBuffer) { try { const data = new Uint8Array(arrayBuffer); const workbook = XLSX.read(data, { type: 'array' }); const worksheet = workbook.Sheets[workbook.SheetNames[0]]; const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); if (jsonData.length === 0) throw new Error("El archivo remoto está vacío."); APP_STATE.rawData = jsonData.map(row => { const newRow = {}; for (const key in row) { newRow[normalizeHeader(key)] = row[key]; } return newRow; }); const analyzeBtn = document.getElementById('analyze-btn'); analyzeBtn.disabled = false; analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20v-4M18 20v-8"></path></svg>Analizar y Calcular Deudas`; document.getElementById('resultsTable').getElementsByTagName('tbody')[0].innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 40px; color:var(--text-secondary)">Datos cargados. Presione "Analizar" para comenzar.</td></tr>`; } catch (error) { console.error("Error procesando Excel:", error); alert(`Error al procesar los datos: ${error.message}`); } }
-async function loadDataFromUrl() { const analyzeBtn = document.getElementById('analyze-btn'); try { const response = await fetch(GOOGLE_SHEET_URL); if (!response.ok) throw new Error(`Error de red: ${response.statusText}`); const arrayBuffer = await response.arrayBuffer(); processExcelBuffer(arrayBuffer); } catch (error) { console.error("Error cargando desde URL:", error); alert(`Fallo la carga de datos. Verifique la conexión o la URL. \nDetalle: ${error.message}`); analyzeBtn.textContent = 'Error al cargar'; } }
+async function loadDataFromUrl(useSampleData = false) {
+    const analyzeBtn = document.getElementById('analyze-btn');
+    try {
+        let arrayBuffer;
+        if (useSampleData) {
+            arrayBuffer = createWorkbookBufferFromAoA(SAMPLE_PAYMENT_ROWS, 'Pagos ejemplo');
+        } else {
+            const response = await fetch(GOOGLE_SHEET_URL);
+            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+            arrayBuffer = await response.arrayBuffer();
+        }
+        processExcelBuffer(arrayBuffer);
+        if (useSampleData) {
+            analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20v-4M18 20v-8"></path></svg>Analizar datos de ejemplo`;
+        }
+    } catch (error) {
+        console.error("Error cargando desde URL:", error);
+        if (!useSampleData) {
+            alert(`Fallo la carga de datos. Verifique la conexión o la URL. \nDetalle: ${error.message}`);
+            return loadDataFromUrl(true);
+        }
+        analyzeBtn.textContent = 'Error al cargar';
+    }
+}
 function cleanHTML(html) { return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(); }
 function formatDataAsTSV(headers, data) { return [headers.join('\t'), ...data.map(row => row.join('\t'))].join('\n'); }
 async function copyToClipboard(button, tsvString) { try { await navigator.clipboard.writeText(tsvString); const originalText = button.innerHTML; button.innerHTML = '¡Copiado!'; setTimeout(() => { button.innerHTML = originalText; }, 2000); } catch (err) { alert('Error al copiar: ' + err); } }
@@ -1237,7 +1336,7 @@ function generateGlobalExportData() { const visibleGFIDs = new Set(Array.from(do
 function generateFamilyExportData(gfid) { 
     const groupData = APP_STATE.aggregatedData.find(g => g.grupoFamiliar === gfid); 
     const overrides = APP_STATE.overrides[gfid] || {}; 
-    const itemsSeleccionados = Array.from(document.querySelectorAll('#meses-container input:checked')).map(cb => cb.value);
+    const itemsSeleccionados = getSelectedMonths();
     const { filas, config } = calcularDeudaParaGrupo(groupData, itemsSeleccionados, overrides); 
     return filas.map(fila => { 
         const alumnoLabel = (config[fila.alumnoIndex]?.nombre || `Alumno ${fila.alumnoIndex + 1}`); 
@@ -1260,7 +1359,7 @@ function generarLibroSimplificado() {
     const visibleGFIDs = new Set(Array.from(document.querySelectorAll('#resultsTable tbody tr[id^="row-"]'), row => row.id.replace('row-', '')));
     const dataToProcess = APP_STATE.aggregatedData.filter(g => visibleGFIDs.has(g.grupoFamiliar));
     
-    const itemsSeleccionados = Array.from(document.querySelectorAll('#meses-container input:checked')).map(cb => cb.value);
+    const itemsSeleccionados = getSelectedMonths();
 
     dataToProcess.forEach(group => {
         const overrides = APP_STATE.overrides[group.grupoFamiliar] || {};
